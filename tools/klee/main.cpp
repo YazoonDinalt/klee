@@ -50,8 +50,10 @@
 #include "llvm/Support/TargetSelect.h"
 
 #include <csignal>
+#include <cstdint>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <thread>
 #include <unistd.h>
@@ -1557,8 +1559,8 @@ static int run_klee_on_function(int pArgc, char **pArgv, char **pEnvp,
       KTest *out = *it;
       interpreter->setReplayKTest(out);
       llvm::errs() << "KLEE: replaying: " << *it << " (" << kTest_numBytes(out)
-                   << " bytes)"
-                   << " (" << ++i << "/" << kTestFiles.size() << ")\n";
+                   << " bytes)" << " (" << ++i << "/" << kTestFiles.size()
+                   << ")\n";
       // XXX should put envp in .ktest ?
       interpreter->runFunctionAsMain(mainFn, out->numArgs, out->args, pEnvp);
       if (interrupted)
@@ -2451,6 +2453,21 @@ int main(int argc, char **argv, char **envp) {
   uint64_t instructions =
       *theStatisticManager->getStatisticByName("Instructions");
   uint64_t forks = *theStatisticManager->getStatisticByName("Forks");
+  uint64_t solverTime =
+      (*theStatisticManager->getStatisticByName("SolverTime")) / 1000000000;
+  uint64_t uncoverageInstructions =
+      *theStatisticManager->getStatisticByName("UncoveredInstructions");
+
+  std::uint32_t solverH;
+  std::uint8_t solverM, solverS;
+  std::tie(solverH, solverM, solverS) = time::seconds(solverTime).toHMS();
+
+  std::stringstream ss;
+  ss << std::setw(2) << std::setfill('0') << solverH << ':';
+  ss << std::setw(2) << std::setfill('0') << +solverM << ':';
+  ss << std::setw(2) << std::setfill('0') << +solverS;
+
+  handler->getInfoStream() << "KLEE: done: solver time = " << ss.str() << "\n";
 
   handler->getInfoStream() << "KLEE: done: explored paths = " << 1 + forks
                            << "\n";
@@ -2477,7 +2494,13 @@ int main(int argc, char **argv, char **envp) {
         << handler->getNumPathsExplored() - handler->getNumPathsCompleted()
         << '\n'
         << "KLEE: done: generated tests = " << handler->getNumTestCases()
-        << '\n';
+        << '\n'
+        << "KLEE: done: forks = " << forks << '\n'
+        << "KLEE: done: coverage = "
+        << (static_cast<double>(instructions - uncoverageInstructions) /
+            instructions) *
+               100
+        << "%" << '\n';
 
   bool useColors = llvm::errs().is_displayed();
   if (useColors)
