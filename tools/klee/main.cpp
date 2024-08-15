@@ -52,6 +52,7 @@
 #include <csignal>
 #include <cstdint>
 #include <dirent.h>
+#include <klee/Statistics/Statistic.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -2463,9 +2464,9 @@ int main(int argc, char **argv, char **envp) {
   std::tie(solverH, solverM, solverS) = time::seconds(solverTime).toHMS();
 
   std::stringstream ss;
-  ss << std::setw(2) << std::setfill('0') << solverH << ':';
-  ss << std::setw(2) << std::setfill('0') << +solverM << ':';
-  ss << std::setw(2) << std::setfill('0') << +solverS;
+  ss << std::setw(2) << std::setfill('0') << solverH << ':' << std::setw(2)
+     << std::setfill('0') << +solverM << ':' << std::setw(2)
+     << std::setfill('0') << +solverS;
 
   handler->getInfoStream() << "KLEE: done: solver time = " << ss.str() << "\n";
 
@@ -2499,8 +2500,7 @@ int main(int argc, char **argv, char **envp) {
         << "KLEE: done: coverage = "
         << (static_cast<double>(instructions - uncoverageInstructions) /
             instructions) *
-               100
-        << "%" << '\n';
+               100;
 
   bool useColors = llvm::errs().is_displayed();
   if (useColors)

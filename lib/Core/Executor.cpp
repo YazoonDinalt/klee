@@ -11,6 +11,7 @@
 
 #include "AddressSpace.h"
 #include "CXXTypeSystem/CXXTypeManager.h"
+#include "CallPathManager.h"
 #include "ConstructStorage.h"
 #include "CoreStats.h"
 #include "DistanceCalculator.h"
@@ -103,6 +104,7 @@
 #include <cxxabi.h>
 #include <iosfwd>
 #include <iostream>
+#include <klee/Statistics/Statistics.h>
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <type_traits>
@@ -489,9 +491,9 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
                    InterpreterHandler *ih)
     : Interpreter(opts), interpreterHandler(ih), searcher(nullptr),
       externalDispatcher(new ExternalDispatcher(ctx)), statsTracker(0),
-      pathWriter(0), symPathWriter(0),
-      specialFunctionHandler(0), timers{time::Span(TimerInterval)},
-      guidanceKind(opts.Guidance), codeGraphInfo(new CodeGraphInfo()),
+      pathWriter(0), symPathWriter(0), specialFunctionHandler(0),
+      timers{time::Span(TimerInterval)}, guidanceKind(opts.Guidance),
+      codeGraphInfo(new CodeGraphInfo()),
       distanceCalculator(new DistanceCalculator(*codeGraphInfo)),
       targetCalculator(new TargetCalculator(*codeGraphInfo)),
       targetManager(new TargetManager(guidanceKind, *distanceCalculator,
@@ -6829,8 +6831,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
                  (!AllowSeedTruncation && obj->numBytes > moSize))) {
               std::stringstream msg;
               msg << "replace size mismatch: " << mo->name << "[" << moSize
-                  << "]"
-                  << " vs " << obj->name << "[" << obj->numBytes << "]"
+                  << "]" << " vs " << obj->name << "[" << obj->numBytes << "]"
                   << " in test\n";
 
               terminateStateOnUserError(state, msg.str());
@@ -7252,8 +7253,7 @@ void Executor::logState(const ExecutionState &state, int id,
     object.first->getSizeExpr()->print(*f);
     *f << "\n";
   }
-  *f << state.symbolics.size() << " symbolics total. "
-     << "Symbolics:\n";
+  *f << state.symbolics.size() << " symbolics total. " << "Symbolics:\n";
   size_t sc = 0;
   for (const auto &symbolic : state.symbolics) {
     *f << "Symbolic number " << sc++ << "\n";
@@ -7455,6 +7455,24 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
   solver->setTimeout(coreSolverTimeout);
 
   PathConstraints extendedConstraints(state.constraints);
+  std::map<std::string, StatisticRecord> StatisticMap{};
+
+  for (ExecutionState *es : objectManager->getStates()) {
+    InfoStackFrame &sf = es->stack.infoStack().back();
+    CallPathNode *pn = sf.callPathNode;
+    if (StatisticMap.find(pn->function->getName().str()) ==
+        StatisticMap.end()) {
+      StatisticMap[pn->function->getName().str()] = pn->statistics;
+    }
+  }
+
+  for (const auto &pair : StatisticMap) {
+    auto name = pair.first;
+    auto instr = pair.second.getValue(stats::instructions);
+    auto forks = pair.second.getValue(stats::forks);
+    std::cout << "Instructions " << name << " = " << instr << std::endl;
+    std::cout << "Forks " << name << " = " << forks << std::endl;
+  }
 
   // Go through each byte in every test case and attempt to restrict
   // it to the constraints contained in cexPreferences.  (Note:
@@ -7503,8 +7521,8 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
                  std::back_inserter(symbolics), isReproducible);
   }
 
-  // we cannot be sure that an irreproducible state proves the presence of an
-  // error
+  // we cannot be sure that an irreproducible state proves the presence of
+  // an error
   if (uninitObjects.size() > 0 || state.symbolics.size() != symbolics.size()) {
     state.error = ReachWithError::None;
   } else if (FunctionCallReproduce != "" &&
@@ -7586,8 +7604,8 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
 
       ref<Expr> symcretizedAddress = sizeSymcrete->addressSymcrete.symcretized;
 
-      /* Receive address array linked with this size array to request address
-       * concretization. */
+      /* Receive address array linked with this size array to request
+       * address concretization. */
       ref<Expr> condcretized = concretizations.at(symcrete->symcretized);
 
       uint64_t newSize = cast<ConstantExpr>(condcretized)->getZExtValue();
