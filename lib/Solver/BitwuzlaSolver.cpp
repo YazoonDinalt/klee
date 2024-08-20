@@ -385,7 +385,7 @@ std::string BitwuzlaSolverImpl::getConstraintLog(const Query &query) {
   outputLog << "(check-sat)\n";
 
   // Client is responsible for freeing the returned C-string
-  return strdup(outputLog.str().c_str());
+  return outputLog.str();
 }
 
 bool BitwuzlaSolverImpl::computeTruth(const ConstraintQuery &query,
