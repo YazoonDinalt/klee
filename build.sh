@@ -5,7 +5,7 @@
 
 # Base folder where dependencies and KLEE itself are installed
 BASE=$HOME/klee_build
-BUILD_SUFFIX="Debug"
+BUILD_SUFFIX="Release"
 
 ## KLEE Required options
 # Build type for KLEE. The options are:
@@ -15,7 +15,7 @@ BUILD_SUFFIX="Debug"
 # Release+Debug+Asserts
 # Debug
 # Debug+Asserts
-KLEE_RUNTIME_BUILD="Debug"
+KLEE_RUNTIME_BUILD="Release"
 
 COVERAGE=0
 ENABLE_DOXYGEN=0
@@ -65,7 +65,7 @@ if [ "$1" = "--debug" ] || [ "$1" = "-g" ]; then
     ENABLE_OPTIMIZED=0
     ENABLE_DEBUG=1
     KLEE_RUNTIME_BUILD="Debug+Asserts"
-    ENABLE_WARNINGS_AS_ERRORS=1
+    ENABLE_WARNINGS_AS_ERRORS=0
     shift 1
 else
     KEEP_PARSE="false"

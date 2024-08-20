@@ -346,12 +346,6 @@ void KModule::manifest(InterpreterHandler *ih,
     }
   }
 
-  for (auto &Function : functions) {
-    if (Function->getName() == "_klee_eh_cxx_personality") {
-      llvm::errs();
-    }
-  }
-
   if (DebugPrintEscapingFunctions && !escapingFunctions.empty()) {
     llvm::errs() << "KLEE: escaping functions: [";
     std::string delimiter = "";

@@ -57,6 +57,7 @@ jobs:
           "Latest klee-uclibc",
           "Asserts disabled",
           "No TCMalloc, optimised runtime",
+          "Warnings as errors",
         ]
         include:
           - name: "LLVM 16"
