@@ -76,7 +76,7 @@ void SeedInfo::patchSeed(const ExecutionState &state, ref<Expr> condition,
   std::set<std::pair<const Array *, unsigned>> directReads;
   std::vector<ref<ReadExpr>> reads;
   findReads(condition, false, reads);
-  for (auto const &re : reads) {
+  for (const auto &re : reads) {
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(re->index)) {
       directReads.insert(
           std::make_pair(re->updates.root, (unsigned)CE->getZExtValue(32)));

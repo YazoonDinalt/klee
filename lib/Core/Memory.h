@@ -33,7 +33,6 @@ namespace klee {
 
 class BitArray;
 class ExecutionState;
-class Executor;
 class MemoryManager;
 class Solver;
 
