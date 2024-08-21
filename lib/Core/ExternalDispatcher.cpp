@@ -306,17 +306,13 @@ Function *ExternalDispatcherImpl::createDispatcher(KCallable *target,
 
   llvm::IRBuilder<> Builder(dBB);
   // Get a Value* for &gTheArgsP, as an i64**.
-#if LLVM_VERSION_CODE >= LLVM_VERSION(15, 0)
   auto argI64sp = Builder.CreateIntToPtr(
       ConstantInt::get(Type::getInt64Ty(ctx), (uintptr_t)&gTheArgsP),
       PointerType::getUnqual(PointerType::getUnqual(Type::getInt64Ty(ctx))),
       "argsp");
+#if LLVM_VERSION_CODE >= LLVM_VERSION(15, 0)
   auto argI64s = Builder.CreateLoad(Builder.getPtrTy(), argI64sp, "args");
 #else
-  auto argI64sp = Builder.CreateIntToPtr(
-      ConstantInt::get(Type::getInt64Ty(ctx), (uintptr_t)(void *)&gTheArgsP),
-      PointerType::getUnqual(PointerType::getUnqual(Type::getInt64Ty(ctx))),
-      "argsp");
   auto argI64s = Builder.CreateLoad(
       argI64sp->getType()->getPointerElementType(), argI64sp, "args");
 #endif

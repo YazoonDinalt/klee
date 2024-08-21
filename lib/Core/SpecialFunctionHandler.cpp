@@ -206,7 +206,7 @@ SpecialFunctionHandler::SpecialFunctionHandler(Executor &_executor)
 
 void SpecialFunctionHandler::prepare(
     std::vector<const char *> &preservedFunctions) {
-  for (auto &hi : handlerInfo) {
+  for (const auto &hi : handlerInfo) {
     Function *f = executor.kmodule->module->getFunction(hi.name);
 
     // No need to create if the function doesn't exist, since it cannot
@@ -227,7 +227,7 @@ void SpecialFunctionHandler::prepare(
 }
 
 void SpecialFunctionHandler::bind() {
-  for (auto &hi : handlerInfo) {
+  for (const auto &hi : handlerInfo) {
     Function *f = executor.kmodule->module->getFunction(hi.name);
 
     if (f && (!hi.doNotOverride || f->isDeclaration())) {

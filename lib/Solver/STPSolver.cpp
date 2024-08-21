@@ -214,7 +214,7 @@ std::string STPSolverImpl::getConstraintLog(const Query &query) {
   vc_printQueryStateToBuffer(vc, builder->getFalse(), &buffer, &length, false);
   vc_pop(vc);
 
-  std::string result = buffer;
+  std::string result(buffer);
   std::free(buffer);
 
   return result;
