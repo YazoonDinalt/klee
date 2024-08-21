@@ -8,10 +8,10 @@ on:
     branches: [main, utbot-main]
   workflow_dispatch:
     inputs:
-      logLevel:
+      warnings_as_errors:
         description: 'Warnings as errors'
         required: true
-        default: '1'
+        default: 1
 
 # Defaults for building KLEE
 env:
@@ -23,7 +23,7 @@ env:
   ENABLE_DOXYGEN: 0
   ENABLE_OPTIMIZED: 1
   ENABLE_DEBUG: 1
-  ENABLE_WARNINGS_AS_ERRORS: {{ github.event.inputs.logLevel }}
+  ENABLE_WARNINGS_AS_ERRORS: ${{ github.event_name == 'workflow_dispatch' && inputs.warnings_as_errors || 1}}
   GTEST_VERSION: 1.11.0
   KLEE_RUNTIME_BUILD: "Debug+Asserts"
   LLVM_VERSION: 11
