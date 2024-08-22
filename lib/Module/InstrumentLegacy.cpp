@@ -91,7 +91,8 @@ void klee::checkModule(bool DontVerify, llvm::Module *module) {
 
 void klee::optimiseAndPrepare(bool OptimiseKLEECall, bool Optimize,
                               bool Simplify, bool WithFPRuntime,
-                              SwitchImplType SwitchType, const std::string &EntryPoint,
+                              SwitchImplType SwitchType,
+                              const std::string &EntryPoint,
                               llvm::ArrayRef<const char *> preservedFunctions,
                               llvm::Module *module) {
   // Preserve all functions containing klee-related function calls from being
