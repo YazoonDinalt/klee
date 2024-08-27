@@ -7451,6 +7451,29 @@ bool isMakeSymbolic(const klee::Symbolic &symb) {
   return good;
 }
 
+void Executor::getFunctionStatistic() {
+
+  std::map<std::string, StatisticRecord> StatisticMap{};
+
+  for (ExecutionState *es : objectManager->getStates()) {
+    InfoStackFrame &sf = es->stack.infoStack().back();
+    CallPathNode *pn = sf.callPathNode;
+    if (StatisticMap.find(pn->function->getName().str()) ==
+        StatisticMap.end()) {
+      StatisticMap[pn->function->getName().str()] = pn->statistics;
+    }
+  }
+
+  for (const auto &pair : StatisticMap) {
+    auto name = pair.first;
+    auto instr = pair.second.getValue(stats::instructions);
+    auto forks = pair.second.getValue(stats::forks);
+    std::cout << "Instructions " << name << " = " << instr << std::endl;
+    std::cout << "Forks " << name << " = " << forks << std::endl;
+  }
+
+};
+
 bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
   solver->setTimeout(coreSolverTimeout);
 
