@@ -83,7 +83,7 @@ void SeedInfo::patchSeed(const ExecutionState &state, ref<Expr> condition,
     }
   }
 
-  for (auto const &[array, i] : directReads) {
+  for (const auto &[array, i] : directReads) {
     ref<Expr> read = ReadExpr::create(UpdateList(array, 0),
                                       ConstantExpr::alloc(i, Expr::Int32));
 
