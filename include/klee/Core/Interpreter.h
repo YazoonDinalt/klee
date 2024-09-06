@@ -237,7 +237,8 @@ public:
   virtual void getConstraintLog(const ExecutionState &state, std::string &res,
                                 LogType logFormat = STP) = 0;
 
-  virtual void getFunctionStatistic(std::map<std::string, int> deltaMap) = 0;
+  virtual void getFunctionStatistic(
+      std::map<std::string, std::map<std::string, int>> deltaMap) = 0;
 
   virtual bool getSymbolicSolution(const ExecutionState &state, KTest &res) = 0;
 

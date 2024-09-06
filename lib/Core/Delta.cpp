@@ -8,23 +8,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "Delta.h"
-#include <iostream>
+#include "CoreStats.h"
 
 using namespace klee;
 
 namespace klee {
 
+std::map<std::string, std::map<std::string, int>>
+Delta::CalculateDelta(std::map<std::string, StatisticRecord> StatMap) {
 
+  std::map<std::string, std::map<std::string, int>> DelMap;
 
-std::map<std::string, int>
-Delta::CalculateDelta(std::map<std::string, int> statisticMap) {
+  for (const auto &pair : StatMap) {
+    auto name = pair.first;
 
-  for (const auto &pair : statisticMap) {
-    deltaMap[pair.first] = pair.second - previousMap[pair.first];
+    DelMap[pair.first]["Instructions"] =
+        pair.second.getValue(stats::instructions);
+    DelMap[pair.first]["Forks"] = pair.second.getValue(stats::forks);
   }
 
-  previousMap = statisticMap; 
-
-  return deltaMap;
+  return DelMap;
 }
+
 } // namespace klee

@@ -4703,9 +4703,17 @@ void Executor::run(ExecutionState *initialState) {
   // std::atomic<bool> running = true;
 
   auto lastExecutionTime = std::chrono::steady_clock::now();
-
+  std::map<std::string, StatisticRecord> StatisticMap{};
+  for (const auto &pair : StatisticMap) {
+    auto name = pair.first;
+    auto instr = pair.second.getValue(stats::instructions);
+    auto forks = pair.second.getValue(stats::forks);
+    std::cout << "===== Current function is " << name << " =====" << '\n'
+              << "Instructions = " << instr << '\n'
+              << "Forks = " << forks << std::endl;
+  }
   Delta dt;
-  
+
   // main interpreter loop
   while (!haltExecution && !searcher->empty()) {
 
@@ -4715,12 +4723,14 @@ void Executor::run(ExecutionState *initialState) {
                                                          lastExecutionTime)
             .count() >= 1) {
 
-      std::map<std::string, int> statisticsMap = {
-          {"Instructions",
-           *theStatisticManager->getStatisticByName("Instructions")},
-          {"Forks", *theStatisticManager->getStatisticByName("Forks")}};
 
-      std::thread thread = this->spawn(dt.CalculateDelta(statisticsMap));
+      for (ExecutionState *es : objectManager->getStates()) {
+        InfoStackFrame &sf = es->stack.infoStack().back();
+        CallPathNode *pn = sf.callPathNode;
+        StatisticMap[pn->function->getName().str()] = pn->statistics;
+      }
+
+      std::thread thread = this->spawn(dt.CalculateDelta(StatisticMap));
 
       lastExecutionTime = currentTime;
       thread.join();
@@ -7476,49 +7486,19 @@ bool isMakeSymbolic(const klee::Symbolic &symb) {
   return good;
 }
 
-void Executor::getFunctionStatistic(std::map<std::string, int> deltaMap) {
+void Executor::getFunctionStatistic(
+    std::map<std::string, std::map<std::string, int>> deltaMap) {
 
   std::cout << "==== Current delta ====" << std::endl;
 
-  for (const auto &pair : deltaMap) {
-    std::cout << pair.first << " = " << pair.second << std::endl;
+  for (const auto &[key1, map2] : deltaMap) {
+    std::cout << " Имя функции: " << key1 << std::endl;
+    for (const auto &[key2, value] : map2) {
+      std::cout << "      Имя статистики: " << key2 << ", Изменение: " << value
+                << std::endl;
+    }
   }
 
-  // std::map<std::string, StatisticRecord> StatisticMap{};
-
-  // for (ExecutionState *es : objectManager->getStates()) {
-  //   InfoStackFrame &sf = es->stack.infoStack().back();
-  //   CallPathNode *pn = sf.callPathNode;
-  //   if (StatisticMap.find(pn->function->getName().str()) ==
-  //       StatisticMap.end()) {
-  //     StatisticMap[pn->function->getName().str()] = pn->statistics;
-  //   }
-  // }
-
-  // std::cout << "==== Current statistic ====" << std::endl;
-
-  // for (const auto &pair : StatisticMap) {
-  //   auto name = pair.first;
-  //   auto instr = pair.second.getValue(stats::instructions);
-  //   auto forks = pair.second.getValue(stats::forks);
-  //   std::cout << "===== Current function is " << name << " =====" << '\n'
-  //             << "Instructions = " << instr << '\n'
-  //             << "Forks = " << forks << std::endl;
-  // }
-
-  // std::this_thread::sleep_for(std::chrono::milliseconds(5));
-
-  // std::cout << "==== Current statistic ====" << std::endl;
-
-  // std::stringstream stats;
-
-  // stats << '\n'
-  //       << "KLEE: done: total instructions = "
-  //       << *theStatisticManager->getStatisticByName("Instructions") << '\n'
-  //       << "KLEE: done: forks = "
-  //       << *theStatisticManager->getStatisticByName("Forks") << '\n';
-  // std::cout << stats.str() << std::endl;
-  // std::this_thread::sleep_for(std::chrono::milliseconds(10));
 };
 
 bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {

@@ -13,6 +13,8 @@
 #include <map>
 #include <string>
 
+#include <klee/Statistics/Statistics.h>
+
 namespace klee {
 
 /// TimingSolver - A simple class that collects delta statistics
@@ -20,12 +22,13 @@ class Delta {
 public:
   std::map<std::string, int> deltaMap;
   std::map<std::string, int> previousMap{{"Instructions", 0}, {"Forks", 0}};
+  std::map<std::string, std::map<std::string, int>> newDelta;
   ;
 
 public:
-  void initPrevious();
-  std::map<std::string, int>
-  CalculateDelta(std::map<std::string, int> statisticMap);
+
+  std::map<std::string, std::map<std::string, int>>
+  CalculateDelta(std::map<std::string, StatisticRecord> StatMap);
 };
 } // namespace klee
 

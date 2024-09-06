@@ -845,9 +845,11 @@ public:
   void logState(const ExecutionState &state, int id,
                 std::unique_ptr<llvm::raw_fd_ostream> &f) override;
 
-  void getFunctionStatistic(std::map<std::string, int> deltaMap) override;
+  void getFunctionStatistic(
+      std::map<std::string, std::map<std::string, int>>  deltaMap) override;
 
-  std::thread spawn(std::map<std::string, int> deltaMap) {
+  std::thread
+  spawn(std::map<std::string, std::map<std::string, int>> deltaMap) {
     return std::thread(
         [this, deltaMap]() { this->getFunctionStatistic(deltaMap); });
   }
