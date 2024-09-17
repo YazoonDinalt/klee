@@ -23,11 +23,54 @@ Delta::CalculateDelta(std::map<std::string, StatisticRecord> StatMap) {
     auto name = pair.first;
 
     DelMap[pair.first]["Instructions"] =
-        pair.second.getValue(stats::instructions);
-    DelMap[pair.first]["Forks"] = pair.second.getValue(stats::forks);
+        pair.second.getValue(stats::instructions) -
+        previousMap[pair.first].getValue(stats::instructions);
+    DelMap[pair.first]["Forks"] =
+        pair.second.getValue(stats::forks) -
+        previousMap[pair.first].getValue(stats::forks);
   }
 
+  previousMap = StatMap;
+
+  // SerializeDelMap(DelMap);
+
   return DelMap;
+}
+
+std::vector<nlohmann::json> Delta::SerializeDelMap(
+    const std::map<std::string, std::map<std::string, int>> &DelMap) {
+
+  std::vector<nlohmann::json> jsonArray;
+
+  for (const auto &funPair : DelMap) {
+    const std::string &funName = funPair.first;
+    const auto &metricsMap = funPair.second;
+
+    for (const auto &metricPair : metricsMap) {
+      const std::string &metricName = metricPair.first;
+      int count = metricPair.second;
+
+      if (count != 0) {
+        jsonArray.push_back({{"name", metricName},
+                             {"params",
+                              {{"funName", funName},
+                               {"type", "int"},
+                               {"value", count},
+                               {"transitive", false}}}});
+      }
+    }
+  }
+
+  // for (const auto &jsonObj : jsonArray) {
+  //   std::cout << jsonObj.dump(4)
+  //             << std::endl; // 4 - количество пробелов для отступа
+  // }
+  // std::cout << "\n\n\n" << std::endl;
+  return jsonArray;
+}
+
+void Delta::initPrevDelta(std::map<std::string, StatisticRecord> StatMap) {
+  previousMap = StatMap;
 }
 
 } // namespace klee

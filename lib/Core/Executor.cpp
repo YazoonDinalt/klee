@@ -4703,7 +4703,7 @@ void Executor::run(ExecutionState *initialState) {
   // std::atomic<bool> running = true;
 
   auto lastExecutionTime = std::chrono::steady_clock::now();
-  std::map<std::string, StatisticRecord> StatisticMap{};
+  std::map<std::string, StatisticRecord> StatisticMap;
   for (const auto &pair : StatisticMap) {
     auto name = pair.first;
     auto instr = pair.second.getValue(stats::instructions);
@@ -4714,6 +4714,8 @@ void Executor::run(ExecutionState *initialState) {
   }
   Delta dt;
 
+  dt.initPrevDelta(StatisticMap);
+
   // main interpreter loop
   while (!haltExecution && !searcher->empty()) {
 
@@ -4723,17 +4725,19 @@ void Executor::run(ExecutionState *initialState) {
                                                          lastExecutionTime)
             .count() >= 1) {
 
-
       for (ExecutionState *es : objectManager->getStates()) {
         InfoStackFrame &sf = es->stack.infoStack().back();
         CallPathNode *pn = sf.callPathNode;
         StatisticMap[pn->function->getName().str()] = pn->statistics;
       }
+// llvm::Function*
+      auto deltaMap = dt.CalculateDelta(StatisticMap);
+      getFunctionStatistic(deltaMap);
 
-      std::thread thread = this->spawn(dt.CalculateDelta(StatisticMap));
+      // std::thread thread = this->spawn(deltaMap);
 
       lastExecutionTime = currentTime;
-      thread.join();
+      // thread.join();
     }
 
     auto action = searcher->selectAction();
@@ -7492,14 +7496,40 @@ void Executor::getFunctionStatistic(
   std::cout << "==== Current delta ====" << std::endl;
 
   for (const auto &[key1, map2] : deltaMap) {
-    std::cout << " Имя функции: " << key1 << std::endl;
+    std::cout << " Fun name: " << key1 << std::endl;
     for (const auto &[key2, value] : map2) {
-      std::cout << "      Имя статистики: " << key2 << ", Изменение: " << value
+      std::cout << "      Metrics name: " << key2 << ", delta: " << value
                 << std::endl;
     }
   }
-
 };
+
+// void sendPostRequest(const std::string& url, const std::vector<json>& metrics) {
+//   CURL *curl;
+//   CURLcode res;
+
+//   curl_global_init(CURL_GLOBAL_ALL);
+//   curl = curl_easy_init();
+
+//   if (curl) {
+
+//     json jsonData = metrics; 
+//     std::string jsonString = jsonData.dump();
+
+//     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+//     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonString.c_str());
+//     res = curl_easy_perform(curl);
+
+//     if (res != CURLE_OK)
+//       fprintf(stderr, "curl_easy_perform() failed: %s\n",
+//               curl_easy_strerror(res));
+
+
+//     curl_easy_cleanup(curl);
+//   }
+//   curl_global_cleanup();
+//   return 0;
+// }
 
 bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
   solver->setTimeout(coreSolverTimeout);
