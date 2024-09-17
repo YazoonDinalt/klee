@@ -11,6 +11,10 @@
 #define KLEE_GETDELTA_H
 
 #include "nlohmann/json.hpp"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/LLVMContext.h"
 #include <map>
 #include <string>
 
@@ -21,17 +25,17 @@ namespace klee {
 /// TimingSolver - A simple class that collects delta statistics
 class Delta {
 public:
-  std::map<std::string, StatisticRecord> previousMap;
-  std::map<std::string, std::map<std::string, int>> Delta;
+  std::map<const llvm::Function *, StatisticRecord> previousMap;
+  std::map<const llvm::Function *, std::map<std::string, int>> Delta;
 
 public:
-  std::map<std::string, std::map<std::string, int>>
-  CalculateDelta(std::map<std::string, StatisticRecord> StatMap);
+  std::map<const llvm::Function *, std::map<std::string, int>>
+  CalculateDelta(std::map<const llvm::Function *, StatisticRecord> StatMap);
 
   std::vector<nlohmann::json> SerializeDelMap(
       const std::map<std::string, std::map<std::string, int>> &DelMap);
 
-  void initPrevDelta(std::map<std::string, StatisticRecord> StatMap);
+  void initPrevDelta(std::map<const  llvm::Function *, StatisticRecord> StatMap);
 };
 } // namespace klee
 

@@ -14,14 +14,13 @@ using namespace klee;
 
 namespace klee {
 
-std::map<std::string, std::map<std::string, int>>
-Delta::CalculateDelta(std::map<std::string, StatisticRecord> StatMap) {
+std::map<const llvm::Function *, std::map<std::string, int>>
+Delta::CalculateDelta(
+    std::map<const llvm::Function *, StatisticRecord> StatMap) {
 
-  std::map<std::string, std::map<std::string, int>> DelMap;
+  std::map<const llvm::Function *, std::map<std::string, int>> DelMap;
 
   for (const auto &pair : StatMap) {
-    auto name = pair.first;
-
     DelMap[pair.first]["Instructions"] =
         pair.second.getValue(stats::instructions) -
         previousMap[pair.first].getValue(stats::instructions);
@@ -69,7 +68,8 @@ std::vector<nlohmann::json> Delta::SerializeDelMap(
   return jsonArray;
 }
 
-void Delta::initPrevDelta(std::map<std::string, StatisticRecord> StatMap) {
+void Delta::initPrevDelta(
+    std::map<const llvm::Function *, StatisticRecord> StatMap) {
   previousMap = StatMap;
 }
 

@@ -4703,9 +4703,9 @@ void Executor::run(ExecutionState *initialState) {
   // std::atomic<bool> running = true;
 
   auto lastExecutionTime = std::chrono::steady_clock::now();
-  std::map<std::string, StatisticRecord> StatisticMap;
+  std::map<const llvm::Function *, StatisticRecord> StatisticMap;
   for (const auto &pair : StatisticMap) {
-    auto name = pair.first;
+    auto name = pair.first->getName().str();
     auto instr = pair.second.getValue(stats::instructions);
     auto forks = pair.second.getValue(stats::forks);
     std::cout << "===== Current function is " << name << " =====" << '\n'
@@ -4720,7 +4720,6 @@ void Executor::run(ExecutionState *initialState) {
   while (!haltExecution && !searcher->empty()) {
 
     auto currentTime = std::chrono::steady_clock::now();
-
     if (std::chrono::duration_cast<std::chrono::seconds>(currentTime -
                                                          lastExecutionTime)
             .count() >= 1) {
@@ -4728,14 +4727,12 @@ void Executor::run(ExecutionState *initialState) {
       for (ExecutionState *es : objectManager->getStates()) {
         InfoStackFrame &sf = es->stack.infoStack().back();
         CallPathNode *pn = sf.callPathNode;
-        StatisticMap[pn->function->getName().str()] = pn->statistics;
+        const llvm::Function *funcPtr = pn->function;
+        StatisticMap[funcPtr] = pn->statistics;
       }
-// llvm::Function*
-      auto deltaMap = dt.CalculateDelta(StatisticMap);
-      getFunctionStatistic(deltaMap);
+      getFunctionStatistic(dt.CalculateDelta(StatisticMap));
 
       // std::thread thread = this->spawn(deltaMap);
-
       lastExecutionTime = currentTime;
       // thread.join();
     }
@@ -7491,12 +7488,12 @@ bool isMakeSymbolic(const klee::Symbolic &symb) {
 }
 
 void Executor::getFunctionStatistic(
-    std::map<std::string, std::map<std::string, int>> deltaMap) {
+    std::map<const llvm::Function *, std::map<std::string, int>> deltaMap) {
 
   std::cout << "==== Current delta ====" << std::endl;
 
   for (const auto &[key1, map2] : deltaMap) {
-    std::cout << " Fun name: " << key1 << std::endl;
+    std::cout << " Fun name: " << key1->getName().str() << std::endl;
     for (const auto &[key2, value] : map2) {
       std::cout << "      Metrics name: " << key2 << ", delta: " << value
                 << std::endl;
@@ -7504,7 +7501,8 @@ void Executor::getFunctionStatistic(
   }
 };
 
-// void sendPostRequest(const std::string& url, const std::vector<json>& metrics) {
+// void sendPostRequest(const std::string& url, const std::vector<json>&
+// metrics) {
 //   CURL *curl;
 //   CURLcode res;
 
@@ -7513,7 +7511,7 @@ void Executor::getFunctionStatistic(
 
 //   if (curl) {
 
-//     json jsonData = metrics; 
+//     json jsonData = metrics;
 //     std::string jsonString = jsonData.dump();
 
 //     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
@@ -7523,7 +7521,6 @@ void Executor::getFunctionStatistic(
 //     if (res != CURLE_OK)
 //       fprintf(stderr, "curl_easy_perform() failed: %s\n",
 //               curl_easy_strerror(res));
-
 
 //     curl_easy_cleanup(curl);
 //   }

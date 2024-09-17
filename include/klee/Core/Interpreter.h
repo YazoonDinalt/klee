@@ -238,7 +238,8 @@ public:
                                 LogType logFormat = STP) = 0;
 
   virtual void getFunctionStatistic(
-      std::map<std::string, std::map<std::string, int>> deltaMap) = 0;
+      std::map<const llvm::Function *, std::map<std::string, int>>
+          deltaMap) = 0;
 
   virtual bool getSymbolicSolution(const ExecutionState &state, KTest &res) = 0;
 

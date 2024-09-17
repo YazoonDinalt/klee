@@ -846,10 +846,11 @@ public:
                 std::unique_ptr<llvm::raw_fd_ostream> &f) override;
 
   void getFunctionStatistic(
-      std::map<std::string, std::map<std::string, int>>  deltaMap) override;
+      std::map<const llvm::Function *, std::map<std::string, int>> deltaMap)
+      override;
 
   std::thread
-  spawn(std::map<std::string, std::map<std::string, int>> deltaMap) {
+  spawn(std::map<const llvm::Function *, std::map<std::string, int>> deltaMap) {
     return std::thread(
         [this, deltaMap]() { this->getFunctionStatistic(deltaMap); });
   }
