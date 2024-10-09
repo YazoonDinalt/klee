@@ -102,6 +102,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <curl/curl.h>
 #include <cxxabi.h>
 #include <iosfwd>
 #include <iostream>
@@ -4730,8 +4731,13 @@ void Executor::run(ExecutionState *initialState) {
         const llvm::Function *funcPtr = pn->function;
         StatisticMap[funcPtr] = pn->statistics;
       }
-      getFunctionStatistic(dt.CalculateDelta(StatisticMap));
 
+      // getFunctionStatistic(dt.CalculateDelta(StatisticMap));
+
+      auto a = dt.CalculateDelta(StatisticMap);
+
+      sendPostRequest("http://localhost:8080/server/save-metric",
+                      dt.SerializeDelMap(a));
       // std::thread thread = this->spawn(deltaMap);
       lastExecutionTime = currentTime;
       // thread.join();
@@ -7501,32 +7507,36 @@ void Executor::getFunctionStatistic(
   }
 };
 
-// void sendPostRequest(const std::string& url, const std::vector<json>&
-// metrics) {
-//   CURL *curl;
-//   CURLcode res;
+void Executor::sendPostRequest(const std::string &url,
+                               const std::vector<json> &metrics) {
+  CURL *curl;
+  CURLcode res;
 
-//   curl_global_init(CURL_GLOBAL_ALL);
-//   curl = curl_easy_init();
+  curl_global_init(CURL_GLOBAL_ALL);
+  curl = curl_easy_init();
 
-//   if (curl) {
+  if (curl) {
+    json jsonData = metrics;
+    std::string jsonString = jsonData.dump();
 
-//     json jsonData = metrics;
-//     std::string jsonString = jsonData.dump();
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonString.c_str());
 
-//     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-//     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonString.c_str());
-//     res = curl_easy_perform(curl);
+    struct curl_slist *headers = nullptr;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
-//     if (res != CURLE_OK)
-//       fprintf(stderr, "curl_easy_perform() failed: %s\n",
-//               curl_easy_strerror(res));
+    res = curl_easy_perform(curl);
+    std::cout << jsonString << std::endl;
+    
+    if (res != CURLE_OK)
+      fprintf(stderr, "curl_easy_perform() failed: %s\n",
+              curl_easy_strerror(res));
 
-//     curl_easy_cleanup(curl);
-//   }
-//   curl_global_cleanup();
-//   return 0;
-// }
+    curl_easy_cleanup(curl);
+  }
+  curl_global_cleanup();
+}
 
 bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
   solver->setTimeout(coreSolverTimeout);

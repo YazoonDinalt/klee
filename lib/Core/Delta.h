@@ -33,9 +33,9 @@ public:
   CalculateDelta(std::map<const llvm::Function *, StatisticRecord> StatMap);
 
   std::vector<nlohmann::json> SerializeDelMap(
-      const std::map<std::string, std::map<std::string, int>> &DelMap);
+      std::map<const llvm::Function *, std::map<std::string, int>> &DelMap);
 
-  void initPrevDelta(std::map<const  llvm::Function *, StatisticRecord> StatMap);
+  void initPrevDelta(std::map<const llvm::Function *, StatisticRecord> StatMap);
 };
 } // namespace klee
 

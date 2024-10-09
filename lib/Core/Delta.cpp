@@ -9,6 +9,7 @@
 
 #include "Delta.h"
 #include "CoreStats.h"
+#include <iostream>
 
 using namespace klee;
 
@@ -37,17 +38,20 @@ Delta::CalculateDelta(
 }
 
 std::vector<nlohmann::json> Delta::SerializeDelMap(
-    const std::map<std::string, std::map<std::string, int>> &DelMap) {
+    std::map<const llvm::Function *, std::map<std::string, int>> &DelMap) {
 
   std::vector<nlohmann::json> jsonArray;
 
   for (const auto &funPair : DelMap) {
-    const std::string &funName = funPair.first;
+    auto funName = funPair.first->getName();
     const auto &metricsMap = funPair.second;
 
     for (const auto &metricPair : metricsMap) {
+      std::cout << &funName << std::endl;
       const std::string &metricName = metricPair.first;
       int count = metricPair.second;
+      std::cout << metricName << std::endl;
+      std::cout << count << std::endl;
 
       if (count != 0) {
         jsonArray.push_back({{"name", metricName},
@@ -65,6 +69,7 @@ std::vector<nlohmann::json> Delta::SerializeDelMap(
   //             << std::endl; // 4 - количество пробелов для отступа
   // }
   // std::cout << "\n\n\n" << std::endl;
+
   return jsonArray;
 }
 
