@@ -26,6 +26,7 @@
 #include "PTree.h"
 #include "Searcher.h"
 #include "SeedInfo.h"
+#include "ServerConnection.h"
 #include "SpecialFunctionHandler.h"
 #include "StatsTracker.h"
 #include "TargetCalculator.h"
@@ -4717,13 +4718,15 @@ void Executor::run(ExecutionState *initialState) {
 
   dt.initPrevDelta(StatisticMap);
 
+  ServerConnection sc;
+  sc.url = "http://localhost:8080/server/save-metric";
   // main interpreter loop
   while (!haltExecution && !searcher->empty()) {
 
     auto currentTime = std::chrono::steady_clock::now();
-    if (std::chrono::duration_cast<std::chrono::seconds>(currentTime -
-                                                         lastExecutionTime)
-            .count() >= 1) {
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(currentTime -
+                                                              lastExecutionTime)
+            .count() >= 330) {
 
       for (ExecutionState *es : objectManager->getStates()) {
         InfoStackFrame &sf = es->stack.infoStack().back();
@@ -4734,10 +4737,10 @@ void Executor::run(ExecutionState *initialState) {
 
       // getFunctionStatistic(dt.CalculateDelta(StatisticMap));
 
-      auto a = dt.CalculateDelta(StatisticMap);
+      auto a = dt.getCurrentMetric(StatisticMap);
 
-      sendPostRequest("http://localhost:8080/server/save-metric",
-                      dt.SerializeDelMap(a));
+      sc.PostRequest(dt.SerializeDelMap(a));
+
       // std::thread thread = this->spawn(deltaMap);
       lastExecutionTime = currentTime;
       // thread.join();
@@ -7506,37 +7509,6 @@ void Executor::getFunctionStatistic(
     }
   }
 };
-
-void Executor::sendPostRequest(const std::string &url,
-                               const std::vector<json> &metrics) {
-  CURL *curl;
-  CURLcode res;
-
-  curl_global_init(CURL_GLOBAL_ALL);
-  curl = curl_easy_init();
-
-  if (curl) {
-    json jsonData = metrics;
-    std::string jsonString = jsonData.dump();
-
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonString.c_str());
-
-    struct curl_slist *headers = nullptr;
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-
-    res = curl_easy_perform(curl);
-    std::cout << jsonString << std::endl;
-    
-    if (res != CURLE_OK)
-      fprintf(stderr, "curl_easy_perform() failed: %s\n",
-              curl_easy_strerror(res));
-
-    curl_easy_cleanup(curl);
-  }
-  curl_global_cleanup();
-}
 
 bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
   solver->setTimeout(coreSolverTimeout);

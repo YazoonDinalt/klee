@@ -237,9 +237,6 @@ public:
   virtual void getConstraintLog(const ExecutionState &state, std::string &res,
                                 LogType logFormat = STP) = 0;
 
-  virtual void sendPostRequest(const std::string &url,
-                               const std::vector<json> &metrics) = 0;
-
   virtual void getFunctionStatistic(
       std::map<const llvm::Function *, std::map<std::string, int>>
           deltaMap) = 0;

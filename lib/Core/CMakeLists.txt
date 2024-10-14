@@ -40,6 +40,7 @@ add_library(kleeCore
   TimingSolver.cpp
   TypeManager.cpp
   UserSearcher.cpp
+  ServerConnection.cpp
 )
 
 target_link_libraries(kleeCore PRIVATE

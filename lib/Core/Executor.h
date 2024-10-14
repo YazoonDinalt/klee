@@ -845,9 +845,6 @@ public:
   void logState(const ExecutionState &state, int id,
                 std::unique_ptr<llvm::raw_fd_ostream> &f) override;
 
-  void sendPostRequest(const std::string &url,
-                       const std::vector<json> &metrics) override;
-
   void getFunctionStatistic(
       std::map<const llvm::Function *, std::map<std::string, int>> deltaMap)
       override;

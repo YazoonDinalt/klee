@@ -1,4 +1,4 @@
-//===-- Delta.cpp -----------------------------------------------*- C++ -*-===//
+//===-- Delta.cpp------------------------------------------------*- C++ -*-===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -9,7 +9,6 @@
 
 #include "Delta.h"
 #include "CoreStats.h"
-#include <iostream>
 
 using namespace klee;
 
@@ -32,8 +31,6 @@ Delta::CalculateDelta(
 
   previousMap = StatMap;
 
-  // SerializeDelMap(DelMap);
-
   return DelMap;
 }
 
@@ -47,11 +44,8 @@ std::vector<nlohmann::json> Delta::SerializeDelMap(
     const auto &metricsMap = funPair.second;
 
     for (const auto &metricPair : metricsMap) {
-      std::cout << &funName << std::endl;
       const std::string &metricName = metricPair.first;
       int count = metricPair.second;
-      std::cout << metricName << std::endl;
-      std::cout << count << std::endl;
 
       if (count != 0) {
         jsonArray.push_back({{"name", metricName},
@@ -64,13 +58,24 @@ std::vector<nlohmann::json> Delta::SerializeDelMap(
     }
   }
 
-  // for (const auto &jsonObj : jsonArray) {
-  //   std::cout << jsonObj.dump(4)
-  //             << std::endl; // 4 - количество пробелов для отступа
-  // }
-  // std::cout << "\n\n\n" << std::endl;
-
   return jsonArray;
+}
+
+std::map<const llvm::Function *, std::map<std::string, int>>
+Delta::getCurrentMetric(
+    std::map<const llvm::Function *, StatisticRecord> StatMap) {
+
+  std::map<const llvm::Function *, std::map<std::string, int>> DelMap;
+
+  for (const auto &pair : StatMap) {
+    DelMap[pair.first]["Instructions"] =
+        pair.second.getValue(stats::instructions);
+    DelMap[pair.first]["Forks"] = pair.second.getValue(stats::forks);
+  }
+
+  previousMap = StatMap;
+
+  return DelMap;
 }
 
 void Delta::initPrevDelta(

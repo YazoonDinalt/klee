@@ -1,4 +1,4 @@
-//===-- Delta.h--- ----------------------------------------------*- C++ -*-===//
+//===-- Delta.h--------------------------------------------------*- C++ -*-===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -34,6 +34,9 @@ public:
 
   std::vector<nlohmann::json> SerializeDelMap(
       std::map<const llvm::Function *, std::map<std::string, int>> &DelMap);
+
+  std::map<const llvm::Function *, std::map<std::string, int>>
+  getCurrentMetric(std::map<const llvm::Function *, StatisticRecord> StatMap);
 
   void initPrevDelta(std::map<const llvm::Function *, StatisticRecord> StatMap);
 };
