@@ -14,19 +14,21 @@ using namespace klee;
 
 namespace klee {
 
-std::map<const llvm::Function *, std::map<std::string, int>>
+std::unordered_map<const llvm::Function *, std::unordered_map<std::string, int>>
 Delta::CalculateDelta(
-    std::map<const llvm::Function *, StatisticRecord> StatMap) {
+    std::unordered_map<const llvm::Function *, StatisticRecord *> StatMap) {
 
-  std::map<const llvm::Function *, std::map<std::string, int>> DelMap;
+  std::unordered_map<const llvm::Function *,
+                     std::unordered_map<std::string, int>>
+      DelMap;
 
   for (const auto &pair : StatMap) {
     DelMap[pair.first]["Instructions"] =
-        pair.second.getValue(stats::instructions) -
-        previousMap[pair.first].getValue(stats::instructions);
+        pair.second->getValue(stats::instructions) -
+        previousMap[pair.first]->getValue(stats::instructions);
     DelMap[pair.first]["Forks"] =
-        pair.second.getValue(stats::forks) -
-        previousMap[pair.first].getValue(stats::forks);
+        pair.second->getValue(stats::forks) -
+        previousMap[pair.first]->getValue(stats::forks);
   }
 
   previousMap = StatMap;
@@ -35,7 +37,8 @@ Delta::CalculateDelta(
 }
 
 std::vector<nlohmann::json> Delta::SerializeDelMap(
-    std::map<const llvm::Function *, std::map<std::string, int>> &DelMap) {
+    std::unordered_map<const llvm::Function *,
+                       std::unordered_map<std::string, int>> &DelMap) {
 
   std::vector<nlohmann::json> jsonArray;
 
@@ -45,7 +48,14 @@ std::vector<nlohmann::json> Delta::SerializeDelMap(
 
     for (const auto &metricPair : metricsMap) {
       const std::string &metricName = metricPair.first;
-      int count = metricPair.second;
+      int prev = 0;
+      if (metricName == "Instructions") {
+        prev = previousMap[funPair.first]->getValue(stats::instructions);
+      } else if (metricName == "Forks") {
+        prev = previousMap[funPair.first]->getValue(stats::forks);
+      }
+
+      int count = metricPair.second - prev;
 
       if (count != 0) {
         jsonArray.push_back({{"name", metricName},
@@ -61,25 +71,25 @@ std::vector<nlohmann::json> Delta::SerializeDelMap(
   return jsonArray;
 }
 
-std::map<const llvm::Function *, std::map<std::string, int>>
+std::unordered_map<const llvm::Function *, std::unordered_map<std::string, int>>
 Delta::getCurrentMetric(
-    std::map<const llvm::Function *, StatisticRecord> StatMap) {
+    std::unordered_map<const llvm::Function *, StatisticRecord *> StatMap) {
 
-  std::map<const llvm::Function *, std::map<std::string, int>> DelMap;
+  std::unordered_map<const llvm::Function *,
+                     std::unordered_map<std::string, int>>
+      DelMap;
 
   for (const auto &pair : StatMap) {
     DelMap[pair.first]["Instructions"] =
-        pair.second.getValue(stats::instructions);
-    DelMap[pair.first]["Forks"] = pair.second.getValue(stats::forks);
+        pair.second->getValue(stats::instructions);
+    DelMap[pair.first]["Forks"] = pair.second->getValue(stats::forks);
   }
-
-  previousMap = StatMap;
 
   return DelMap;
 }
 
 void Delta::initPrevDelta(
-    std::map<const llvm::Function *, StatisticRecord> StatMap) {
+    std::unordered_map<const llvm::Function *, StatisticRecord *> StatMap) {
   previousMap = StatMap;
 }
 

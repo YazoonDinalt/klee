@@ -25,20 +25,26 @@ namespace klee {
 /// TimingSolver - A simple class that collects delta statistics
 class Delta {
 public:
-  std::map<const llvm::Function *, StatisticRecord> previousMap;
-  std::map<const llvm::Function *, std::map<std::string, int>> Delta;
+  std::unordered_map<const llvm::Function *, StatisticRecord *> previousMap;
+  std::unordered_map<const llvm::Function *, std::map<std::string, int>> Delta;
 
 public:
-  std::map<const llvm::Function *, std::map<std::string, int>>
-  CalculateDelta(std::map<const llvm::Function *, StatisticRecord> StatMap);
+  std::unordered_map<const llvm::Function *,
+                     std::unordered_map<std::string, int>>
+  CalculateDelta(
+      std::unordered_map<const llvm::Function *, StatisticRecord *> StatMap);
 
   std::vector<nlohmann::json> SerializeDelMap(
-      std::map<const llvm::Function *, std::map<std::string, int>> &DelMap);
+      std::unordered_map<const llvm::Function *,
+                         std::unordered_map<std::string, int>> &DelMap);
 
-  std::map<const llvm::Function *, std::map<std::string, int>>
-  getCurrentMetric(std::map<const llvm::Function *, StatisticRecord> StatMap);
+  std::unordered_map<const llvm::Function *,
+                     std::unordered_map<std::string, int>>
+  getCurrentMetric(
+      std::unordered_map<const llvm::Function *, StatisticRecord *> StatMap);
 
-  void initPrevDelta(std::map<const llvm::Function *, StatisticRecord> StatMap);
+  void initPrevDelta(
+      std::unordered_map<const llvm::Function *, StatisticRecord *> StatMap);
 };
 } // namespace klee
 

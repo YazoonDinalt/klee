@@ -4705,18 +4705,9 @@ void Executor::run(ExecutionState *initialState) {
   // std::atomic<bool> running = true;
 
   auto lastExecutionTime = std::chrono::steady_clock::now();
-  std::map<const llvm::Function *, StatisticRecord> StatisticMap;
-  for (const auto &pair : StatisticMap) {
-    auto name = pair.first->getName().str();
-    auto instr = pair.second.getValue(stats::instructions);
-    auto forks = pair.second.getValue(stats::forks);
-    std::cout << "===== Current function is " << name << " =====" << '\n'
-              << "Instructions = " << instr << '\n'
-              << "Forks = " << forks << std::endl;
-  }
   Delta dt;
 
-  dt.initPrevDelta(StatisticMap);
+  dt.initPrevDelta(objectManager->StatisticMap);
 
   ServerConnection sc;
   sc.url = "http://localhost:8080/server/save-metric";
@@ -4726,21 +4717,11 @@ void Executor::run(ExecutionState *initialState) {
     auto currentTime = std::chrono::steady_clock::now();
     if (std::chrono::duration_cast<std::chrono::milliseconds>(currentTime -
                                                               lastExecutionTime)
-            .count() >= 330) {
+            .count() >= 33) {
 
-      for (ExecutionState *es : objectManager->getStates()) {
-        InfoStackFrame &sf = es->stack.infoStack().back();
-        CallPathNode *pn = sf.callPathNode;
-        const llvm::Function *funcPtr = pn->function;
-        StatisticMap[funcPtr] = pn->statistics;
-      }
-
-      // getFunctionStatistic(dt.CalculateDelta(StatisticMap));
-
-      auto a = dt.getCurrentMetric(StatisticMap);
-
+      dt.previousMap = objectManager->StatisticMap;
+      auto a = dt.getCurrentMetric(objectManager->StatisticMap);
       sc.PostRequest(dt.SerializeDelMap(a));
-
       // std::thread thread = this->spawn(deltaMap);
       lastExecutionTime = currentTime;
       // thread.join();

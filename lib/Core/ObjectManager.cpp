@@ -1,5 +1,6 @@
 #include "ObjectManager.h"
 
+#include "CallPathManager.h"
 #include "CoreStats.h"
 #include "PForest.h"
 #include "TargetManager.h"
@@ -26,6 +27,10 @@ void ObjectManager::setCurrentState(ExecutionState *_current) {
   assert(current == nullptr);
   current = _current;
   statesUpdated = true;
+  InfoStackFrame &sf = current->stack.infoStack().back();
+  const llvm::Function *funcPtr = sf.callPathNode->function;
+  StatisticMap[funcPtr] = &sf.callPathNode->statistics;
+  // StatisticMap.emplace(funcPtr, &pn->statistics);
 }
 
 ExecutionState *ObjectManager::branchState(ExecutionState *state,
