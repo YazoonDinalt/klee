@@ -28,6 +28,7 @@
 #include "SeedInfo.h"
 #include "ServerConnection.h"
 #include "SpecialFunctionHandler.h"
+#include "StatisticQueue.h"
 #include "StatsTracker.h"
 #include "TargetCalculator.h"
 #include "TargetManager.h"
@@ -4706,25 +4707,35 @@ void Executor::run(ExecutionState *initialState) {
 
   auto lastExecutionTime = std::chrono::steady_clock::now();
   Delta dt;
+  StatisticQueue StatQ;
 
   dt.initPrevDelta(objectManager->StatisticMap);
-
   ServerConnection sc;
-  sc.url = "http://localhost:8080/server/save-metric";
+  sc.url = "http://localhost:8080/metrics";
+  sc.getUID();
+  std::atomic<bool> shouldStop = false;
+
+  std::thread consumer([&StatQ, &dt, &sc, &shouldStop]() {
+    while (!shouldStop) {
+      if (!StatQ.empty()) {
+        auto data = StatQ.pop();
+        sc.PostRequest(dt.SerializeDelMap(data, sc.UID));
+      }
+    }
+  });
+
   // main interpreter loop
   while (!haltExecution && !searcher->empty()) {
 
     auto currentTime = std::chrono::steady_clock::now();
     if (std::chrono::duration_cast<std::chrono::milliseconds>(currentTime -
                                                               lastExecutionTime)
-            .count() >= 33) {
+            .count() >= 100) {
 
       dt.previousMap = objectManager->StatisticMap;
       auto a = dt.getCurrentMetric(objectManager->StatisticMap);
-      sc.PostRequest(dt.SerializeDelMap(a));
-      // std::thread thread = this->spawn(deltaMap);
+      StatQ.push(a);
       lastExecutionTime = currentTime;
-      // thread.join();
     }
 
     auto action = searcher->selectAction();
@@ -4735,6 +4746,9 @@ void Executor::run(ExecutionState *initialState) {
       objectManager->updateSubscribers();
     }
   }
+
+  shouldStop = true; // Сигнализируем о необходимости остановки
+  consumer.join();
 
   if (guidanceKind == GuidanceKind::ErrorGuidance) {
     reportProgressTowardsTargets();
@@ -7476,20 +7490,6 @@ bool isMakeSymbolic(const klee::Symbolic &symb) {
                       array->getIdentifier().c_str());
   return good;
 }
-
-void Executor::getFunctionStatistic(
-    std::map<const llvm::Function *, std::map<std::string, int>> deltaMap) {
-
-  std::cout << "==== Current delta ====" << std::endl;
-
-  for (const auto &[key1, map2] : deltaMap) {
-    std::cout << " Fun name: " << key1->getName().str() << std::endl;
-    for (const auto &[key2, value] : map2) {
-      std::cout << "      Metrics name: " << key2 << ", delta: " << value
-                << std::endl;
-    }
-  }
-};
 
 bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
   solver->setTimeout(coreSolverTimeout);

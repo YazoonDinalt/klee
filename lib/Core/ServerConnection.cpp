@@ -42,4 +42,25 @@ void ServerConnection::PostRequest(const std::vector<nlohmann::json> &metrics) {
   }
   curl_global_cleanup();
 };
+
+size_t write_data(void *ptr, size_t size, size_t nmemb, void *userdata) {
+  std::string *buffer = static_cast<std::string *>(userdata);
+  buffer->append(static_cast<char *>(ptr), size * nmemb);
+  return size * nmemb;
+}
+
+void ServerConnection::getUID() {
+
+  CURL *curl = curl_easy_init();
+
+  curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:8080/new-session");
+
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &UID);
+
+  // Выполняем запрос
+  curl_easy_perform(curl);
+  curl_easy_cleanup(curl);
+}
+
 } // namespace klee

@@ -36,7 +36,8 @@ public:
 
   std::vector<nlohmann::json> SerializeDelMap(
       std::unordered_map<const llvm::Function *,
-                         std::unordered_map<std::string, int>> &DelMap);
+                         std::unordered_map<std::string, int>> &DelMap,
+      std::string UID);
 
   std::unordered_map<const llvm::Function *,
                      std::unordered_map<std::string, int>>

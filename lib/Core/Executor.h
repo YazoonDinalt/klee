@@ -845,16 +845,6 @@ public:
   void logState(const ExecutionState &state, int id,
                 std::unique_ptr<llvm::raw_fd_ostream> &f) override;
 
-  void getFunctionStatistic(
-      std::map<const llvm::Function *, std::map<std::string, int>> deltaMap)
-      override;
-
-  std::thread
-  spawn(std::map<const llvm::Function *, std::map<std::string, int>> deltaMap) {
-    return std::thread(
-        [this, deltaMap]() { this->getFunctionStatistic(deltaMap); });
-  }
-
   bool getSymbolicSolution(const ExecutionState &state, KTest &res) override;
 
   void getCoveredLines(const ExecutionState &state,

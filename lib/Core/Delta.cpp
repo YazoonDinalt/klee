@@ -38,7 +38,7 @@ Delta::CalculateDelta(
 
 std::vector<nlohmann::json> Delta::SerializeDelMap(
     std::unordered_map<const llvm::Function *,
-                       std::unordered_map<std::string, int>> &DelMap) {
+                       std::unordered_map<std::string, int>> &DelMap, std::string UID) {
 
   std::vector<nlohmann::json> jsonArray;
 
@@ -48,17 +48,24 @@ std::vector<nlohmann::json> Delta::SerializeDelMap(
 
     for (const auto &metricPair : metricsMap) {
       const std::string &metricName = metricPair.first;
-      int prev = 0;
-      if (metricName == "Instructions") {
-        prev = previousMap[funPair.first]->getValue(stats::instructions);
-      } else if (metricName == "Forks") {
-        prev = previousMap[funPair.first]->getValue(stats::forks);
-      }
+      uint64_t prev = 0;
+      // if (metricName == "Instructions") {
+      //   std::optional<int> prev =
+      //       previousMap[funPair.first]->getValue(stats::instructions);
+      //   if (!prev)
+      //     prev = 0;
+      // } else if (metricName == "Forks") {
+      //   std::optional<int> prev =
+      //       previousMap[funPair.first]->getValue(stats::forks);
+      //   if (!prev)
+      //     prev = 0;
+      // }
 
-      int count = metricPair.second - prev;
+      int count = metricPair.second;
 
-      if (count != 0) {
-        jsonArray.push_back({{"name", metricName},
+      if (count - prev != 0) {
+        jsonArray.push_back({{"guid", UID},
+                             {"name", metricName},
                              {"params",
                               {{"funName", funName},
                                {"type", "int"},

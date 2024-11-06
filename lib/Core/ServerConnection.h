@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef KLEE_SERVERCONNECTION_H
 #define KLEE_SERVERCONNECTION_H
 
@@ -18,13 +17,15 @@
 namespace klee {
 
 /// TimingSolver - A simple class that collects delta statistics
-    class ServerConnection {
-        public:
-          std::string url;
+class ServerConnection {
+public:
+  std::string url;
+  std::string UID;
 
-        public:
-          void PostRequest(const std::vector<nlohmann::json> &metrics);
-    };
+public:
+  void PostRequest(const std::vector<nlohmann::json> &metrics);
+  void getUID();
+};
 } // namespace klee
 
 #endif

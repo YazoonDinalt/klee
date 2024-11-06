@@ -41,6 +41,7 @@ add_library(kleeCore
   TypeManager.cpp
   UserSearcher.cpp
   ServerConnection.cpp
+  StatisticQueue.cpp
 )
 
 target_link_libraries(kleeCore PRIVATE
