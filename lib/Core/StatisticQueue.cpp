@@ -1,9 +1,13 @@
+//===-- StatisticQueue.cpp---------------------------------------*- C++ -*-===//
+//
+//                     The KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 #include "StatisticQueue.h"
-#include "llvm/IR/Function.h"
-#include <condition_variable>
-#include <mutex>
-#include <queue>
-#include <unordered_map>
 
 using namespace klee;
 
