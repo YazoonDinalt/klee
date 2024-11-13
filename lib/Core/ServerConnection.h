@@ -16,7 +16,6 @@
 
 namespace klee {
 
-/// TimingSolver - A simple class that collects delta statistics
 class ServerConnection {
 public:
   std::string url;

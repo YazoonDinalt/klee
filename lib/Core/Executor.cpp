@@ -4703,10 +4703,10 @@ void Executor::run(ExecutionState *initialState) {
 
   objectManager->initialUpdate();
 
-  // std::atomic<bool> running = true;
-
   auto lastExecutionTime = std::chrono::steady_clock::now();
   Delta dt;
+  std::thread consumer;
+  std::thread producer;
   StatisticQueue StatQ;
 
   dt.initPrevDelta(objectManager->StatisticMap);
@@ -4714,29 +4714,33 @@ void Executor::run(ExecutionState *initialState) {
   sc.url = "http://localhost:8080/metrics";
   sc.getUID();
   std::atomic<bool> shouldStop = false;
-
-  std::thread consumer([&StatQ, &dt, &sc, &shouldStop]() {
-    while (!shouldStop) {
-      if (!StatQ.empty()) {
-        auto data = StatQ.pop();
-        sc.PostRequest(dt.SerializeDelMap(data, sc.UID));
+  if (sc.UID != "ServerNotValid") {
+    consumer = std::thread([&StatQ, &dt, &sc, &shouldStop]() {
+      while (!shouldStop) {
+        if (!StatQ.empty()) {
+          auto data = StatQ.pop();
+          sc.PostRequest(dt.SerializeDelMap(data, sc.UID));
+        }
       }
-    }
-  });
+    });
+
+    producer =
+        std::thread([&lastExecutionTime, &dt, &StatQ, &shouldStop, this]() {
+          while (!shouldStop) {
+            auto currentTime = std::chrono::steady_clock::now();
+            if (std::chrono::duration_cast<std::chrono::milliseconds>(
+                    currentTime - lastExecutionTime)
+                    .count() >= 100) {
+
+              StatQ.push(dt.getCurrentMetric(objectManager->StatisticMap));
+              lastExecutionTime = currentTime;
+            }
+          }
+        });
+  }
 
   // main interpreter loop
   while (!haltExecution && !searcher->empty()) {
-
-    auto currentTime = std::chrono::steady_clock::now();
-    if (std::chrono::duration_cast<std::chrono::milliseconds>(currentTime -
-                                                              lastExecutionTime)
-            .count() >= 100) {
-
-      dt.previousMap = objectManager->StatisticMap;
-      auto a = dt.getCurrentMetric(objectManager->StatisticMap);
-      StatQ.push(a);
-      lastExecutionTime = currentTime;
-    }
 
     auto action = searcher->selectAction();
     executeAction(action);
@@ -4746,9 +4750,14 @@ void Executor::run(ExecutionState *initialState) {
       objectManager->updateSubscribers();
     }
   }
+  auto a = dt.getCurrentMetric(objectManager->StatisticMap);
+  StatQ.push(a);
 
-  shouldStop = true; // Сигнализируем о необходимости остановки
-  consumer.join();
+  shouldStop = true;
+  if (sc.UID != "ServerNotValid") {
+    consumer.join();
+    producer.join();
+  }
 
   if (guidanceKind == GuidanceKind::ErrorGuidance) {
     reportProgressTowardsTargets();

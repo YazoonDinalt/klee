@@ -4,8 +4,8 @@
 #include "CoreStats.h"
 #include "PForest.h"
 #include "TargetManager.h"
-
 #include "klee/Module/KModule.h"
+#include <iostream>
 
 using namespace llvm;
 using namespace klee;
@@ -28,9 +28,8 @@ void ObjectManager::setCurrentState(ExecutionState *_current) {
   current = _current;
   statesUpdated = true;
   InfoStackFrame &sf = current->stack.infoStack().back();
-  const llvm::Function *funcPtr = sf.callPathNode->function;
-  StatisticMap[funcPtr] = &sf.callPathNode->statistics;
-  // StatisticMap.emplace(funcPtr, &pn->statistics);
+  StatisticMap[sf.callPathNode] = &sf.callPathNode->statistics;
+  auto funName = sf.callPathNode->function->getName().str();
 }
 
 ExecutionState *ObjectManager::branchState(ExecutionState *state,

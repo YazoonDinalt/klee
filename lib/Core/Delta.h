@@ -10,11 +10,9 @@
 #ifndef KLEE_GETDELTA_H
 #define KLEE_GETDELTA_H
 
+#include "CallPathManager.h"
 #include "nlohmann/json.hpp"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/LLVMContext.h"
 #include <map>
 #include <string>
 
@@ -22,18 +20,14 @@
 
 namespace klee {
 
-/// TimingSolver - A simple class that collects delta statistics
 class Delta {
-public:
-  std::unordered_map<const llvm::Function *, StatisticRecord *> previousMap;
-  std::unordered_map<const llvm::Function *, std::map<std::string, int>> Delta;
-
 public:
   std::unordered_map<const llvm::Function *,
                      std::unordered_map<std::string, int>>
-  CalculateDelta(
-      std::unordered_map<const llvm::Function *, StatisticRecord *> StatMap);
+      previousMap;
+  std::unordered_map<const llvm::Function *, std::map<std::string, int>> Delta;
 
+public:
   std::vector<nlohmann::json> SerializeDelMap(
       std::unordered_map<const llvm::Function *,
                          std::unordered_map<std::string, int>> &DelMap,
@@ -41,11 +35,10 @@ public:
 
   std::unordered_map<const llvm::Function *,
                      std::unordered_map<std::string, int>>
-  getCurrentMetric(
-      std::unordered_map<const llvm::Function *, StatisticRecord *> StatMap);
+      getCurrentMetric(std::unordered_map<CallPathNode *, StatisticRecord *>);
 
   void initPrevDelta(
-      std::unordered_map<const llvm::Function *, StatisticRecord *> StatMap);
+      std::unordered_map<CallPathNode *, StatisticRecord *> StatMap);
 };
 } // namespace klee
 

@@ -14,31 +14,10 @@ using namespace klee;
 
 namespace klee {
 
-std::unordered_map<const llvm::Function *, std::unordered_map<std::string, int>>
-Delta::CalculateDelta(
-    std::unordered_map<const llvm::Function *, StatisticRecord *> StatMap) {
-
-  std::unordered_map<const llvm::Function *,
-                     std::unordered_map<std::string, int>>
-      DelMap;
-
-  for (const auto &pair : StatMap) {
-    DelMap[pair.first]["Instructions"] =
-        pair.second->getValue(stats::instructions) -
-        previousMap[pair.first]->getValue(stats::instructions);
-    DelMap[pair.first]["Forks"] =
-        pair.second->getValue(stats::forks) -
-        previousMap[pair.first]->getValue(stats::forks);
-  }
-
-  previousMap = StatMap;
-
-  return DelMap;
-}
-
 std::vector<nlohmann::json> Delta::SerializeDelMap(
     std::unordered_map<const llvm::Function *,
-                       std::unordered_map<std::string, int>> &DelMap, std::string UID) {
+                       std::unordered_map<std::string, int>> &DelMap,
+    std::string UID) {
 
   std::vector<nlohmann::json> jsonArray;
 
@@ -48,19 +27,7 @@ std::vector<nlohmann::json> Delta::SerializeDelMap(
 
     for (const auto &metricPair : metricsMap) {
       const std::string &metricName = metricPair.first;
-      uint64_t prev = 0;
-      // if (metricName == "Instructions") {
-      //   std::optional<int> prev =
-      //       previousMap[funPair.first]->getValue(stats::instructions);
-      //   if (!prev)
-      //     prev = 0;
-      // } else if (metricName == "Forks") {
-      //   std::optional<int> prev =
-      //       previousMap[funPair.first]->getValue(stats::forks);
-      //   if (!prev)
-      //     prev = 0;
-      // }
-
+      uint64_t prev = previousMap[funPair.first][metricName];
       int count = metricPair.second;
 
       if (count - prev != 0) {
@@ -80,24 +47,37 @@ std::vector<nlohmann::json> Delta::SerializeDelMap(
 
 std::unordered_map<const llvm::Function *, std::unordered_map<std::string, int>>
 Delta::getCurrentMetric(
-    std::unordered_map<const llvm::Function *, StatisticRecord *> StatMap) {
+    std::unordered_map<CallPathNode *, StatisticRecord *> StatMap) {
 
   std::unordered_map<const llvm::Function *,
                      std::unordered_map<std::string, int>>
       DelMap;
 
   for (const auto &pair : StatMap) {
-    DelMap[pair.first]["Instructions"] =
-        pair.second->getValue(stats::instructions);
-    DelMap[pair.first]["Forks"] = pair.second->getValue(stats::forks);
+    CallPathNode *cpn = pair.first;
+    if (DelMap.count(cpn->function) > 0) {
+      DelMap[cpn->function]["Instructions"] +=
+          pair.second->getValue(stats::instructions);
+      DelMap[cpn->function]["Forks"] += pair.second->getValue(stats::forks);
+    } else {
+      DelMap[cpn->function]["Instructions"] =
+          pair.second->getValue(stats::instructions);
+      DelMap[cpn->function]["Forks"] = pair.second->getValue(stats::forks);
+    }
   }
 
   return DelMap;
 }
 
 void Delta::initPrevDelta(
-    std::unordered_map<const llvm::Function *, StatisticRecord *> StatMap) {
-  previousMap = StatMap;
+    std::unordered_map<CallPathNode *, StatisticRecord *> StatMap) {
+
+  for (const auto &pair : StatMap) {
+    previousMap[pair.first->function]["Instructions"] =
+        pair.second->getValue(stats::instructions);
+    previousMap[pair.first->function]["Forks"] =
+        pair.second->getValue(stats::forks);
+  }
 }
 
 } // namespace klee
