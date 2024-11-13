@@ -28,8 +28,8 @@ std::vector<nlohmann::json> Delta::SerializeDelMap(
     for (const auto &metricPair : metricsMap) {
       const std::string &metricName = metricPair.first;
       uint64_t prev;
-      int count = metricPair.second;
-      std::string targetFunName = "myFunction";
+      auto count = metricPair.second;
+      std::string type_of_var = "int";
       for (const auto &jsonObject : newPrevMap) {
         if (jsonObject["params"]["funName"] == funName &&
             jsonObject["name"] == metricName) {
@@ -37,57 +37,76 @@ std::vector<nlohmann::json> Delta::SerializeDelMap(
           break;
         }
       }
+
       if (count - prev != 0) {
-        jsonArray.push_back({{"guid", UID},
-                             {"name", metricName},
-                             {"params",
-                              {{"funName", funName},
-                               {"type", "int"},
-                               {"value", count},
-                               {"transitive", false}}}});
+        if (metricName == "SolverTime") {
+          type_of_var = "double";
+          double solverCount = static_cast<double>(count) / (double)1000000000;
+          solverCount = static_cast<double>(round(solverCount * 100)) / 100;
+          jsonArray.push_back({{"guid", UID},
+                               {"name", metricName},
+                               {"params",
+                                {{"funName", funName},
+                                 {"type", type_of_var},
+                                 {"value", solverCount},
+                                 {"transitive", false}}}});
+        } else {
+          jsonArray.push_back({{"guid", UID},
+                               {"name", metricName},
+                               {"params",
+                                {{"funName", funName},
+                                 {"type", type_of_var},
+                                 {"value", count},
+                                 {"transitive", false}}}});
+        }
       }
     }
   }
 
-    newPrevMap = jsonArray;
+  newPrevMap = jsonArray;
 
-    return jsonArray;
-  }
+  return jsonArray;
+}
+
+std::unordered_map<const llvm::Function *, std::unordered_map<std::string, int>>
+Delta::getCurrentMetric(
+    std::unordered_map<CallPathNode *, StatisticRecord *> StatMap) {
 
   std::unordered_map<const llvm::Function *,
                      std::unordered_map<std::string, int>>
-  Delta::getCurrentMetric(
-      std::unordered_map<CallPathNode *, StatisticRecord *> StatMap) {
+      DelMap;
 
-    std::unordered_map<const llvm::Function *,
-                       std::unordered_map<std::string, int>>
-        DelMap;
-
-    for (const auto &pair : StatMap) {
-      CallPathNode *cpn = pair.first;
-      if (DelMap.count(cpn->function) > 0) {
-        DelMap[cpn->function]["Instructions"] +=
-            pair.second->getValue(stats::instructions);
-        DelMap[cpn->function]["Forks"] += pair.second->getValue(stats::forks);
-      } else {
-        DelMap[cpn->function]["Instructions"] =
-            pair.second->getValue(stats::instructions);
-        DelMap[cpn->function]["Forks"] = pair.second->getValue(stats::forks);
-      }
-    }
-
-    return DelMap;
-  }
-
-  void Delta::initPrevDelta(
-      std::unordered_map<CallPathNode *, StatisticRecord *> StatMap) {
-
-    for (const auto &pair : StatMap) {
-      previousMap[pair.first->function]["Instructions"] =
+  for (const auto &pair : StatMap) {
+    CallPathNode *cpn = pair.first;
+    if (DelMap.count(cpn->function) > 0) {
+      DelMap[cpn->function]["Instructions"] +=
           pair.second->getValue(stats::instructions);
-      previousMap[pair.first->function]["Forks"] =
-          pair.second->getValue(stats::forks);
+      DelMap[cpn->function]["SolverTime"] +=
+          pair.second->getValue(stats::solverTime);
+      DelMap[cpn->function]["Forks"] += pair.second->getValue(stats::forks);
+    } else {
+      DelMap[cpn->function]["Instructions"] =
+          pair.second->getValue(stats::instructions);
+      DelMap[cpn->function]["SolverTime"] +=
+          pair.second->getValue(stats::solverTime);
+      DelMap[cpn->function]["Forks"] = pair.second->getValue(stats::forks);
     }
   }
+
+  return DelMap;
+}
+
+void Delta::initPrevDelta(
+    std::unordered_map<CallPathNode *, StatisticRecord *> StatMap) {
+
+  for (const auto &pair : StatMap) {
+    previousMap[pair.first->function]["Instructions"] =
+        pair.second->getValue(stats::instructions);
+    previousMap[pair.first->function]["Forks"] =
+        pair.second->getValue(stats::forks);
+    previousMap[pair.first->function]["SolverTime"] =
+        pair.second->getValue(stats::solverTime);
+  }
+}
 
 } // namespace klee
