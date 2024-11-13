@@ -5,7 +5,6 @@
 #include "PForest.h"
 #include "TargetManager.h"
 #include "klee/Module/KModule.h"
-#include <iostream>
 
 using namespace llvm;
 using namespace klee;

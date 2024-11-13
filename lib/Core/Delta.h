@@ -37,8 +37,8 @@ public:
                      std::unordered_map<std::string, int>>
       getCurrentMetric(std::unordered_map<CallPathNode *, StatisticRecord *>);
 
-  void initPrevDelta(
-      std::unordered_map<CallPathNode *, StatisticRecord *> StatMap);
+  void
+  initPrevDelta(std::unordered_map<CallPathNode *, StatisticRecord *> StatMap);
 };
 } // namespace klee
 

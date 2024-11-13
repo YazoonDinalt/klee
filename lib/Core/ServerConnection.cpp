@@ -71,7 +71,7 @@ void ServerConnection::getUID() {
     std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res)
               << std::endl;
   }
-  
+
   curl_easy_cleanup(curl);
 }
 
