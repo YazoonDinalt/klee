@@ -649,7 +649,9 @@ static std::vector<RuleJson> rules() {
 #define TTYPE(N, I, S)                                                         \
   if ((I) > (unsigned int)StateTerminationType::SOLVERERR &&                   \
       (I) < (unsigned int)StateTerminationType::PROGERR) {                     \
-    ret.push_back(RuleJson{#N, {"Program error"}, {}, {}});                    \
+    ret.push_back(RuleJson {                                                   \
+      #N, {"Program error"}, {}, {}                                            \
+    });                                                                        \
   }
 #define TTMARK(N, I)
 
@@ -2456,8 +2458,6 @@ int main(int argc, char **argv, char **envp) {
   uint64_t forks = *theStatisticManager->getStatisticByName("Forks");
   uint64_t solverTime =
       (*theStatisticManager->getStatisticByName("SolverTime")) / 1000000000;
-  uint64_t uncoverageInstructions =
-      *theStatisticManager->getStatisticByName("UncoveredInstructions");
 
   std::uint32_t solverH;
   std::uint8_t solverM, solverS;
@@ -2498,9 +2498,9 @@ int main(int argc, char **argv, char **envp) {
         << '\n'
         << "KLEE: done: forks = " << forks << '\n'
         << "KLEE: done: coverage = "
-        << (static_cast<double>(instructions - uncoverageInstructions) /
-            instructions) *
-               100;
+        << (static_cast<double>(handler->getNumPathsCompleted()) /
+            static_cast<double>(handler->getNumTestCases())) *
+               100 << "%";
 
   bool useColors = llvm::errs().is_displayed();
   if (useColors)
