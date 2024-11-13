@@ -28,13 +28,13 @@ void ServerConnection::PostRequest(const std::vector<nlohmann::json> &metrics) {
 
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonString.c_str());
-    // curl_easy_setopt(curl, CURLOPT_VERBOSE, 0L);
-    // curl_easy_setopt(
-    //     curl, CURLOPT_WRITEFUNCTION,
-    //     +[](void *, size_t size, size_t nmemb, void *) -> size_t {
-    //       return size * nmemb;
-    //     });
-    // curl_easy_setopt(curl, CURLOPT_WRITEDATA, nullptr);
+    curl_easy_setopt(curl, CURLOPT_VERBOSE, 0L);
+    curl_easy_setopt(
+        curl, CURLOPT_WRITEFUNCTION,
+        +[](void *, size_t size, size_t nmemb, void *) -> size_t {
+          return size * nmemb;
+        });
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, nullptr);
     struct curl_slist *headers = nullptr;
     headers = curl_slist_append(headers, "Content-Type: application/json");
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);

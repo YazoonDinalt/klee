@@ -13,10 +13,6 @@
 #include "CallPathManager.h"
 #include "nlohmann/json.hpp"
 #include "llvm/IR/Function.h"
-#include <map>
-#include <string>
-
-#include <klee/Statistics/Statistics.h>
 
 namespace klee {
 
@@ -25,6 +21,7 @@ public:
   std::unordered_map<const llvm::Function *,
                      std::unordered_map<std::string, int>>
       previousMap;
+  std::vector<nlohmann::json> newPrevMap;
   std::unordered_map<const llvm::Function *, std::map<std::string, int>> Delta;
 
 public:

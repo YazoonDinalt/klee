@@ -11,8 +11,8 @@
 #define KLEE_SERVERCONNECTION_H
 
 #include "nlohmann/json.hpp"
-#include <string>
-#include <vector>
+
+using json = nlohmann::json;
 
 namespace klee {
 
@@ -22,7 +22,7 @@ public:
   std::string UID;
 
 public:
-  void PostRequest(const std::vector<nlohmann::json> &metrics);
+  void PostRequest(const std::vector<json> &metrics);
   void getUID();
 };
 } // namespace klee

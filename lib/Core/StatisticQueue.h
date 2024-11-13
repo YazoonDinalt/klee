@@ -9,9 +9,7 @@
 
 #include "llvm/IR/Function.h"
 #include <condition_variable>
-#include <mutex>
 #include <queue>
-#include <unordered_map>
 
 #ifndef KLEE_STATISTICQUEUE_H
 #define KLEE_STATISTICQUEUE_H
