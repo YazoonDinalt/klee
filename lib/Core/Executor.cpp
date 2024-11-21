@@ -14,7 +14,6 @@
 #include "CallPathManager.h"
 #include "ConstructStorage.h"
 #include "CoreStats.h"
-#include "Delta.h"
 #include "DistanceCalculator.h"
 #include "ExecutionState.h"
 #include "ExternalDispatcher.h"
@@ -22,6 +21,7 @@
 #include "ImpliedValue.h"
 #include "Memory.h"
 #include "MemoryManager.h"
+#include "MetricCollectorAndSerializer.h"
 #include "PForest.h"
 #include "PTree.h"
 #include "Searcher.h"
@@ -4726,29 +4726,28 @@ void Executor::run(ExecutionState *initialState) {
   objectManager->initialUpdate();
 
   auto lastExecutionTime = std::chrono::steady_clock::now();
-  Delta dt;
+  MetricCollectorAndSerializer mc;
   std::thread consumer;
   std::thread producer;
   StatisticQueue StatQ;
 
-  dt.initPrevDelta(objectManager->StatisticMap);
   ServerConnection scForUID(UrlUID);
   scForUID.getUIDFromServer();
   ServerConnection sc(MetricsUID);
   sc.setUID(scForUID.getUID());
   std::atomic<bool> shouldStop = false;
   if (sc.getUID() != "ServerNotValid") {
-    consumer = std::thread([&StatQ, &dt, &sc, &shouldStop]() {
+    consumer = std::thread([&StatQ, &mc, &sc, &shouldStop]() {
       while (!shouldStop) {
         if (!StatQ.empty()) {
           auto data = StatQ.pop();
-          sc.PostRequest(dt.SerializeDelMap(std::move(data), sc.getUID()));
+          sc.PostRequest(mc.GetJson(std::move(data), sc.getUID()));
         }
       }
     });
 
     producer =
-        std::thread([&lastExecutionTime, &dt, &StatQ, &shouldStop, this]() {
+        std::thread([&lastExecutionTime, &mc, &StatQ, &shouldStop, this]() {
           auto nextExecutionTime = std::chrono::steady_clock::now() +
                                    std::chrono::milliseconds(DeltaTime);
           while (!shouldStop) {
@@ -4758,7 +4757,7 @@ void Executor::run(ExecutionState *initialState) {
                     currentTime - lastExecutionTime)
                     .count() >= 100) {
 
-              StatQ.push(dt.getCurrentMetric(objectManager->StatisticMap));
+              StatQ.push(mc.getCurrentMetric(objectManager->StatisticMap));
               nextExecutionTime += std::chrono::milliseconds(DeltaTime);
             }
           }
@@ -4775,7 +4774,7 @@ void Executor::run(ExecutionState *initialState) {
       objectManager->updateSubscribers();
     }
   }
-  auto a = dt.getCurrentMetric(objectManager->StatisticMap);
+  auto a = mc.getCurrentMetric(objectManager->StatisticMap);
   StatQ.push(a);
 
   shouldStop = true;

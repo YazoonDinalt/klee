@@ -1,4 +1,4 @@
-//===-- Delta.cpp------------------------------------------------*- C++ -*-===//
+//===--MetricCollectorAndSerializer.cpp---------------------------*-C++ -*-===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -7,17 +7,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Delta.h"
+#include "MetricCollectorAndSerializer.h"
 #include "CoreStats.h"
 
 using namespace klee;
 
 const double NANOSECONDS_PER_SECOND = 1000000000.0;
 
-std::vector<nlohmann::json> Delta::SerializeDelMap(
+std::vector<nlohmann::json> MetricCollectorAndSerializer::GetJson(
     const std::unordered_map<const llvm::Function *,
                              std::unordered_map<std::string, int>> &DelMap,
     std::string UID) {
+
+  std::vector<nlohmann::json> jsonArray = SerializeDelMap(DelMap, UID);
+
+  previousMap = jsonArray;
+
+  return jsonArray;
+}
+
+std::vector<nlohmann::json> MetricCollectorAndSerializer::SerializeDelMap(
+    const std::unordered_map<const llvm::Function *,
+                             std::unordered_map<std::string, int>> &DelMap,
+    const std::string UID) {
 
   std::vector<nlohmann::json> jsonArray;
 
@@ -29,7 +41,7 @@ std::vector<nlohmann::json> Delta::SerializeDelMap(
       const std::string &metricName = metricPair.first;
       uint64_t prev;
       auto count = metricPair.second;
-      for (const auto &jsonObject : newPrevMap) {
+      for (const auto &jsonObject : previousMap) {
         if (jsonObject["params"]["funName"] == funName &&
             jsonObject["name"] == metricName) {
           prev = jsonObject["params"]["value"];
@@ -62,13 +74,11 @@ std::vector<nlohmann::json> Delta::SerializeDelMap(
     }
   }
 
-  newPrevMap = jsonArray;
-
   return jsonArray;
 }
 
 std::unordered_map<const llvm::Function *, std::unordered_map<std::string, int>>
-Delta::getCurrentMetric(
+MetricCollectorAndSerializer::getCurrentMetric(
     std::unordered_map<CallPathNode *, StatisticRecord *> StatMap) {
 
   std::unordered_map<const llvm::Function *,
@@ -86,17 +96,4 @@ Delta::getCurrentMetric(
   }
 
   return DelMap;
-}
-
-void Delta::initPrevDelta(
-    std::unordered_map<CallPathNode *, StatisticRecord *> StatMap) {
-
-  for (const auto &pair : StatMap) {
-    previousMap[pair.first->function]["Instructions"] =
-        pair.second->getValue(stats::instructions);
-    previousMap[pair.first->function]["Forks"] =
-        pair.second->getValue(stats::forks);
-    previousMap[pair.first->function]["SolverTime"] =
-        pair.second->getValue(stats::solverTime);
-  }
 }

@@ -1,4 +1,4 @@
-//===-- Delta.h--------------------------------------------------*- C++ -*-===//
+//===--MetricCollectorAndSerializer.h-----------------------------*-C++ -*-===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -18,17 +18,19 @@
 
 namespace klee {
 
-class Delta {
-public:
-  std::unordered_map<const llvm::Function *,
-                     std::unordered_map<std::string, int>>
-      previousMap;
-  std::vector<nlohmann::json> newPrevMap;
+class MetricCollectorAndSerializer {
+private:
+  std::vector<nlohmann::json> previousMap;
   std::mutex StatisticMapMutex;
   std::unordered_map<const llvm::Function *, std::map<std::string, int>> Delta;
 
-public:
   std::vector<nlohmann::json> SerializeDelMap(
+      const std::unordered_map<const llvm::Function *,
+                               std::unordered_map<std::string, int>> &DelMap,
+      const std::string UID);
+
+public:
+  std::vector<nlohmann::json> GetJson(
       const std::unordered_map<const llvm::Function *,
                                std::unordered_map<std::string, int>> &DelMap,
       const std::string UID);
@@ -36,9 +38,6 @@ public:
   std::unordered_map<const llvm::Function *,
                      std::unordered_map<std::string, int>>
       getCurrentMetric(std::unordered_map<CallPathNode *, StatisticRecord *>);
-
-  void
-  initPrevDelta(std::unordered_map<CallPathNode *, StatisticRecord *> StatMap);
 };
 } // namespace klee
 
