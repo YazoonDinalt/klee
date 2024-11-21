@@ -142,6 +142,9 @@ cl::OptionCategory TestGenCat("Test generation options",
 cl::OptionCategory LazyInitCat("Lazy initialization option",
                                "These options configure lazy initialization.");
 
+cl::OptionCategory AgentCat("Agent options",
+                            "These options specify agent settings.");
+
 cl::opt<bool> UseAdvancedTypeSystem(
     "use-advanced-type-system",
     cl::desc("Use advanced information about type system from "
@@ -343,6 +346,25 @@ cl::opt<bool> AllExternalWarnings(
     cl::desc("Issue a warning everytime an external call is made, "
              "as opposed to once per function (default=false)"),
     cl::cat(ExtCallsCat));
+
+/*** Agent options ***/
+
+cl::opt<std::string> UrlUID("url-uid",
+                            cl::init("http://localhost:8080/new-session"),
+                            cl::desc("The option allows to specify the url "
+                                     "from which can get the UID"),
+                            cl::cat(AgentCat));
+
+cl::opt<std::string> MetricsUID(
+    "metrics-uid", cl::init("http://localhost:8080/metrics"),
+    cl::desc("The option allows to specify the url where can save metrics"),
+    cl::cat(AgentCat));
+
+cl::opt<bool>
+    DeltaTime("delta-time", cl::init(100),
+              cl::desc("Using the option, you specify the time in milliseconds "
+                       "at which statistics will be sent (default = 100)"),
+              cl::cat(AgentCat));
 
 /*** Seeding options ***/
 
@@ -4710,9 +4732,9 @@ void Executor::run(ExecutionState *initialState) {
   StatisticQueue StatQ;
 
   dt.initPrevDelta(objectManager->StatisticMap);
-  ServerConnection scForUID("http://localhost:8080/new-session");
+  ServerConnection scForUID(UrlUID);
   scForUID.getUIDFromServer();
-  ServerConnection sc("http://localhost:8080/metrics");
+  ServerConnection sc(MetricsUID);
   sc.setUID(scForUID.getUID());
   std::atomic<bool> shouldStop = false;
   if (sc.getUID() != "ServerNotValid") {
@@ -4727,14 +4749,17 @@ void Executor::run(ExecutionState *initialState) {
 
     producer =
         std::thread([&lastExecutionTime, &dt, &StatQ, &shouldStop, this]() {
+          auto nextExecutionTime = std::chrono::steady_clock::now() +
+                                   std::chrono::milliseconds(DeltaTime);
           while (!shouldStop) {
+            std::this_thread::sleep_until(nextExecutionTime);
             auto currentTime = std::chrono::steady_clock::now();
             if (std::chrono::duration_cast<std::chrono::milliseconds>(
                     currentTime - lastExecutionTime)
                     .count() >= 100) {
 
               StatQ.push(dt.getCurrentMetric(objectManager->StatisticMap));
-              lastExecutionTime = currentTime;
+              nextExecutionTime += std::chrono::milliseconds(DeltaTime);
             }
           }
         });
