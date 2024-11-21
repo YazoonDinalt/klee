@@ -1,9 +1,9 @@
 #include "ObjectManager.h"
 
+#include "CallPathManager.h"
 #include "CoreStats.h"
 #include "PForest.h"
 #include "TargetManager.h"
-
 #include "klee/Module/KModule.h"
 
 using namespace llvm;
@@ -26,6 +26,8 @@ void ObjectManager::setCurrentState(ExecutionState *_current) {
   assert(current == nullptr);
   current = _current;
   statesUpdated = true;
+  InfoStackFrame &sf = current->stack.infoStack().back();
+  StatisticMap[sf.callPathNode] = &sf.callPathNode->statistics;
 }
 
 ExecutionState *ObjectManager::branchState(ExecutionState *state,

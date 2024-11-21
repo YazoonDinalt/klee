@@ -92,6 +92,7 @@ class MemoryManager;
 class MemoryObject;
 class ObjectState;
 class PForest;
+class Delta;
 class Searcher;
 class SeedInfo;
 class SpecialFunctionHandler;

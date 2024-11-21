@@ -11,6 +11,7 @@
 
 #include "AddressSpace.h"
 #include "CXXTypeSystem/CXXTypeManager.h"
+#include "CallPathManager.h"
 #include "ConstructStorage.h"
 #include "CoreStats.h"
 #include "DistanceCalculator.h"
@@ -20,11 +21,14 @@
 #include "ImpliedValue.h"
 #include "Memory.h"
 #include "MemoryManager.h"
+#include "MetricCollectorAndSerializer.h"
 #include "PForest.h"
 #include "PTree.h"
 #include "Searcher.h"
 #include "SeedInfo.h"
+#include "ServerConnection.h"
 #include "SpecialFunctionHandler.h"
+#include "StatisticQueue.h"
 #include "StatsTracker.h"
 #include "TargetCalculator.h"
 #include "TargetManager.h"
@@ -72,6 +76,7 @@
 #include "klee/Support/RoundingModeUtil.h"
 #include "klee/System/MemoryUsage.h"
 #include "klee/System/Time.h"
+#include <klee/Statistics/Statistics.h>
 
 #include "CodeEvent.h"
 #include "CodeLocation.h"
@@ -100,6 +105,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <curl/curl.h>
 #include <cxxabi.h>
 #include <iosfwd>
 #include <iostream>
@@ -135,6 +141,9 @@ cl::OptionCategory TestGenCat("Test generation options",
 
 cl::OptionCategory LazyInitCat("Lazy initialization option",
                                "These options configure lazy initialization.");
+
+cl::OptionCategory AgentCat("Agent options",
+                            "These options specify agent settings.");
 
 cl::opt<bool> UseAdvancedTypeSystem(
     "use-advanced-type-system",
@@ -338,6 +347,25 @@ cl::opt<bool> AllExternalWarnings(
              "as opposed to once per function (default=false)"),
     cl::cat(ExtCallsCat));
 
+/*** Agent options ***/
+
+cl::opt<std::string> UrlUID("url-uid",
+                            cl::init("http://localhost:8080/new-session"),
+                            cl::desc("The option allows to specify the url "
+                                     "from which can get the UID"),
+                            cl::cat(AgentCat));
+
+cl::opt<std::string> MetricsUID(
+    "metrics-uid", cl::init("http://localhost:8080/metrics"),
+    cl::desc("The option allows to specify the url where can save metrics"),
+    cl::cat(AgentCat));
+
+cl::opt<bool>
+    DeltaTime("delta-time", cl::init(100),
+              cl::desc("Using the option, you specify the time in milliseconds "
+                       "at which statistics will be sent (default = 100)"),
+              cl::cat(AgentCat));
+
 /*** Seeding options ***/
 
 cl::opt<bool> AlwaysOutputSeeds(
@@ -489,9 +517,9 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
                    InterpreterHandler *ih)
     : Interpreter(opts), interpreterHandler(ih), searcher(nullptr),
       externalDispatcher(new ExternalDispatcher(ctx)), statsTracker(0),
-      pathWriter(0), symPathWriter(0),
-      specialFunctionHandler(0), timers{time::Span(TimerInterval)},
-      guidanceKind(opts.Guidance), codeGraphInfo(new CodeGraphInfo()),
+      pathWriter(0), symPathWriter(0), specialFunctionHandler(0),
+      timers{time::Span(TimerInterval)}, guidanceKind(opts.Guidance),
+      codeGraphInfo(new CodeGraphInfo()),
       distanceCalculator(new DistanceCalculator(*codeGraphInfo)),
       targetCalculator(new TargetCalculator(*codeGraphInfo)),
       targetManager(new TargetManager(guidanceKind, *distanceCalculator,
@@ -4697,8 +4725,45 @@ void Executor::run(ExecutionState *initialState) {
 
   objectManager->initialUpdate();
 
+  MetricCollectorAndSerializer mc;
+  std::thread consumer;
+  std::thread producer;
+  StatisticQueue StatQ;
+
+  ServerConnection scForUID(UrlUID);
+  scForUID.getUIDFromServer();
+
+  ServerConnection sc(MetricsUID);
+  sc.setUID(scForUID.getUID());
+
+  std::atomic<bool> shouldStop = false;
+  if (sc.getUID() != "ServerNotValid") {
+    consumer = std::thread([&StatQ, &mc, &sc, &shouldStop]() {
+      while (!shouldStop) {
+        if (!StatQ.empty()) {
+          auto data = StatQ.pop();
+          sc.PostRequest(mc.GetJson(std::move(data), sc.getUID()));
+        }
+      }
+    });
+  }
+  auto startTime = std::chrono::high_resolution_clock::now();
+
   // main interpreter loop
   while (!haltExecution && !searcher->empty()) {
+
+    if (sc.getUID() != "ServerNotValid") {
+      auto currentTime = std::chrono::high_resolution_clock::now();
+      auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(
+                             currentTime - startTime)
+                             .count();
+      if (elapsedTime >= 100) {
+        auto localStatisticMap = objectManager->StatisticMap;
+        StatQ.push(mc.getCurrentMetric(localStatisticMap));
+        startTime = currentTime;
+      }
+    }
+
     auto action = searcher->selectAction();
     executeAction(action);
     objectManager->updateSubscribers();
@@ -4706,6 +4771,14 @@ void Executor::run(ExecutionState *initialState) {
     if (!checkMemoryUsage()) {
       objectManager->updateSubscribers();
     }
+  }
+  auto a = mc.getCurrentMetric(objectManager->StatisticMap);
+  StatQ.push(a);
+
+  shouldStop = true;
+  if (sc.getUID() != "ServerNotValid") {
+    consumer.join();
+    producer.join();
   }
 
   if (guidanceKind == GuidanceKind::ErrorGuidance) {
@@ -6829,8 +6902,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
                  (!AllowSeedTruncation && obj->numBytes > moSize))) {
               std::stringstream msg;
               msg << "replace size mismatch: " << mo->name << "[" << moSize
-                  << "]"
-                  << " vs " << obj->name << "[" << obj->numBytes << "]"
+                  << "]" << " vs " << obj->name << "[" << obj->numBytes << "]"
                   << " in test\n";
 
               terminateStateOnUserError(state, msg.str());
@@ -7252,8 +7324,7 @@ void Executor::logState(const ExecutionState &state, int id,
     object.first->getSizeExpr()->print(*f);
     *f << "\n";
   }
-  *f << state.symbolics.size() << " symbolics total. "
-     << "Symbolics:\n";
+  *f << state.symbolics.size() << " symbolics total. " << "Symbolics:\n";
   size_t sc = 0;
   for (const auto &symbolic : state.symbolics) {
     *f << "Symbolic number " << sc++ << "\n";
@@ -7503,8 +7574,8 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
                  std::back_inserter(symbolics), isReproducible);
   }
 
-  // we cannot be sure that an irreproducible state proves the presence of an
-  // error
+  // we cannot be sure that an irreproducible state proves the presence of
+  // an error
   if (uninitObjects.size() > 0 || state.symbolics.size() != symbolics.size()) {
     state.error = ReachWithError::None;
   } else if (FunctionCallReproduce != "" &&
@@ -7586,8 +7657,8 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
 
       ref<Expr> symcretizedAddress = sizeSymcrete->addressSymcrete.symcretized;
 
-      /* Receive address array linked with this size array to request address
-       * concretization. */
+      /* Receive address array linked with this size array to request
+       * address concretization. */
       ref<Expr> condcretized = concretizations.at(symcrete->symcretized);
 
       uint64_t newSize = cast<ConstantExpr>(condcretized)->getZExtValue();

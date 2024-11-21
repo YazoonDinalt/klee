@@ -1,11 +1,13 @@
 #ifndef KLEE_OBJECTMANAGER_H
 #define KLEE_OBJECTMANAGER_H
 
+#include "CallPathManager.h"
 #include "ExecutionState.h"
 #include "PForest.h"
 #include "klee/ADT/Ref.h"
 #include "klee/Core/BranchTypes.h"
 #include "klee/Module/KModule.h"
+#include <klee/Statistics/Statistics.h>
 
 #include <vector>
 
@@ -49,6 +51,7 @@ public:
   ObjectManager();
   ~ObjectManager();
 
+  std::unordered_map<CallPathNode *, StatisticRecord *> StatisticMap;
   void addSubscriber(Subscriber *);
   void addProcessForest(PForest *);
 

@@ -23,6 +23,7 @@ add_library(kleeCore
   ImpliedValue.cpp
   Memory.cpp
   MemoryManager.cpp
+  MetricCollectorAndSerializer.cpp
   ObjectManager.cpp
   PForest.cpp
   MockBuilder.cpp
@@ -30,7 +31,9 @@ add_library(kleeCore
   Searcher.cpp
   SeedInfo.cpp
   SeedMap.cpp
+  ServerConnection.cpp
   SpecialFunctionHandler.cpp
+  StatisticQueue.cpp
   StatsTracker.cpp
   TargetCalculator.cpp
   TargetedExecutionReporter.cpp
@@ -52,7 +55,12 @@ target_link_libraries(kleeCore PRIVATE
 llvm_config(kleeCore "${USE_LLVM_SHARED}" core executionengine mcjit native support)
 target_link_libraries(kleeCore PRIVATE ${SQLite3_LIBRARIES})
 
+
+find_package(CURL REQUIRED)
+
 target_include_directories(kleeCore SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS} ${SQLite3_INCLUDE_DIRS})
 target_include_directories(kleeCore PRIVATE ${KLEE_INCLUDE_DIRS})
 target_compile_options(kleeCore PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
 target_compile_definitions(kleeCore PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})
+target_include_directories(kleeCore SYSTEM PRIVATE ${CURL_INCLUDE_DIRS})
+target_link_libraries(kleeCore PRIVATE CURL::libcurl)
