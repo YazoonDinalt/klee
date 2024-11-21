@@ -4756,8 +4756,8 @@ void Executor::run(ExecutionState *initialState) {
             if (std::chrono::duration_cast<std::chrono::milliseconds>(
                     currentTime - lastExecutionTime)
                     .count() >= 100) {
-
-              StatQ.push(mc.getCurrentMetric(objectManager->StatisticMap));
+              auto localStatisticMap = objectManager->StatisticMap;
+              StatQ.push(mc.getCurrentMetric(localStatisticMap));
               nextExecutionTime += std::chrono::milliseconds(DeltaTime);
             }
           }
