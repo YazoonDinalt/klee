@@ -4725,7 +4725,6 @@ void Executor::run(ExecutionState *initialState) {
 
   objectManager->initialUpdate();
 
-  auto lastExecutionTime = std::chrono::steady_clock::now();
   MetricCollectorAndSerializer mc;
   std::thread consumer;
   std::thread producer;
@@ -4733,8 +4732,10 @@ void Executor::run(ExecutionState *initialState) {
 
   ServerConnection scForUID(UrlUID);
   scForUID.getUIDFromServer();
+
   ServerConnection sc(MetricsUID);
   sc.setUID(scForUID.getUID());
+
   std::atomic<bool> shouldStop = false;
   if (sc.getUID() != "ServerNotValid") {
     consumer = std::thread([&StatQ, &mc, &sc, &shouldStop]() {
@@ -4745,27 +4746,24 @@ void Executor::run(ExecutionState *initialState) {
         }
       }
     });
-
-    producer =
-        std::thread([&lastExecutionTime, &mc, &StatQ, &shouldStop, this]() {
-          auto nextExecutionTime = std::chrono::steady_clock::now() +
-                                   std::chrono::milliseconds(DeltaTime);
-          while (!shouldStop) {
-            std::this_thread::sleep_until(nextExecutionTime);
-            auto currentTime = std::chrono::steady_clock::now();
-            if (std::chrono::duration_cast<std::chrono::milliseconds>(
-                    currentTime - lastExecutionTime)
-                    .count() >= 100) {
-              auto localStatisticMap = objectManager->StatisticMap;
-              StatQ.push(mc.getCurrentMetric(localStatisticMap));
-              nextExecutionTime += std::chrono::milliseconds(DeltaTime);
-            }
-          }
-        });
   }
+  auto startTime = std::chrono::high_resolution_clock::now();
 
   // main interpreter loop
   while (!haltExecution && !searcher->empty()) {
+
+    if (sc.getUID() != "ServerNotValid") {
+      auto currentTime = std::chrono::high_resolution_clock::now();
+      auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(
+                             currentTime - startTime)
+                             .count();
+      if (elapsedTime >= 100) {
+        auto localStatisticMap = objectManager->StatisticMap;
+        StatQ.push(mc.getCurrentMetric(localStatisticMap));
+        startTime = currentTime;
+      }
+    }
+
     auto action = searcher->selectAction();
     executeAction(action);
     objectManager->updateSubscribers();
