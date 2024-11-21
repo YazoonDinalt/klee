@@ -14,6 +14,8 @@
 #include "nlohmann/json.hpp"
 #include "llvm/IR/Function.h"
 
+#include <mutex>
+
 namespace klee {
 
 class Delta {
@@ -22,13 +24,14 @@ public:
                      std::unordered_map<std::string, int>>
       previousMap;
   std::vector<nlohmann::json> newPrevMap;
+  std::mutex StatisticMapMutex;
   std::unordered_map<const llvm::Function *, std::map<std::string, int>> Delta;
 
 public:
   std::vector<nlohmann::json> SerializeDelMap(
-      std::unordered_map<const llvm::Function *,
-                         std::unordered_map<std::string, int>> &DelMap,
-      std::string UID);
+      const std::unordered_map<const llvm::Function *,
+                               std::unordered_map<std::string, int>> &DelMap,
+      const std::string UID);
 
   std::unordered_map<const llvm::Function *,
                      std::unordered_map<std::string, int>>

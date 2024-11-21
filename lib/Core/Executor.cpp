@@ -76,6 +76,7 @@
 #include "klee/Support/RoundingModeUtil.h"
 #include "klee/System/MemoryUsage.h"
 #include "klee/System/Time.h"
+#include <klee/Statistics/Statistics.h>
 
 #include "CodeEvent.h"
 #include "CodeLocation.h"
@@ -108,7 +109,6 @@
 #include <cxxabi.h>
 #include <iosfwd>
 #include <iostream>
-#include <klee/Statistics/Statistics.h>
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <type_traits>
@@ -4710,16 +4710,17 @@ void Executor::run(ExecutionState *initialState) {
   StatisticQueue StatQ;
 
   dt.initPrevDelta(objectManager->StatisticMap);
-  ServerConnection sc;
-  sc.url = "http://localhost:8080/metrics";
-  sc.getUID();
+  ServerConnection scForUID("http://localhost:8080/new-session");
+  scForUID.getUIDFromServer();
+  ServerConnection sc("http://localhost:8080/metrics");
+  sc.setUID(scForUID.getUID());
   std::atomic<bool> shouldStop = false;
-  if (sc.UID != "ServerNotValid") {
+  if (sc.getUID() != "ServerNotValid") {
     consumer = std::thread([&StatQ, &dt, &sc, &shouldStop]() {
       while (!shouldStop) {
         if (!StatQ.empty()) {
           auto data = StatQ.pop();
-          sc.PostRequest(dt.SerializeDelMap(data, sc.UID));
+          sc.PostRequest(dt.SerializeDelMap(std::move(data), sc.getUID()));
         }
       }
     });
@@ -4741,7 +4742,6 @@ void Executor::run(ExecutionState *initialState) {
 
   // main interpreter loop
   while (!haltExecution && !searcher->empty()) {
-
     auto action = searcher->selectAction();
     executeAction(action);
     objectManager->updateSubscribers();
@@ -4754,7 +4754,7 @@ void Executor::run(ExecutionState *initialState) {
   StatQ.push(a);
 
   shouldStop = true;
-  if (sc.UID != "ServerNotValid") {
+  if (sc.getUID() != "ServerNotValid") {
     consumer.join();
     producer.join();
   }

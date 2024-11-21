@@ -8,25 +8,31 @@
 //===----------------------------------------------------------------------===//
 
 #include "ServerConnection.h"
-#include <curl/curl.h>
-#include <iostream>
+#include <llvm/Support/raw_ostream.h>
 
 using namespace klee;
 
-namespace klee {
+ServerConnection::ServerConnection(const std::string &serverUrl)
+    : url(serverUrl), curl(curl_easy_init()) {
+  curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+  if (!curl) {
+    llvm::errs() << "Failed to initialize curl" << "\n";
+  }
+  curl_global_init(CURL_GLOBAL_ALL);
+}
+
+ServerConnection::~ServerConnection() {
+  curl_easy_cleanup(curl);
+  curl_global_cleanup();
+}
 
 void ServerConnection::PostRequest(const std::vector<nlohmann::json> &metrics) {
-  CURL *curl;
   CURLcode res;
-
-  curl_global_init(CURL_GLOBAL_ALL);
-  curl = curl_easy_init();
 
   if (curl) {
     nlohmann::json jsonData = metrics;
     std::string jsonString = jsonData.dump();
 
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonString.c_str());
     curl_easy_setopt(curl, CURLOPT_VERBOSE, 0L);
     curl_easy_setopt(
@@ -42,12 +48,9 @@ void ServerConnection::PostRequest(const std::vector<nlohmann::json> &metrics) {
     res = curl_easy_perform(curl);
 
     if (res != CURLE_OK)
-      fprintf(stderr, "curl_easy_perform() failed: %s\n",
-              curl_easy_strerror(res));
-
-    curl_easy_cleanup(curl);
+      llvm::errs() << "curl_easy_perform() failed: " << curl_easy_strerror(res)
+                   << "\n";
   }
-  curl_global_cleanup();
 };
 
 size_t write_data(void *ptr, size_t size, size_t nmemb, void *userdata) {
@@ -56,11 +59,7 @@ size_t write_data(void *ptr, size_t size, size_t nmemb, void *userdata) {
   return size * nmemb;
 }
 
-void ServerConnection::getUID() {
-
-  CURL *curl = curl_easy_init();
-
-  curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:8080/new-session");
+void ServerConnection::getUIDFromServer() {
 
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, &UID);
@@ -68,11 +67,11 @@ void ServerConnection::getUID() {
   CURLcode res = curl_easy_perform(curl);
   if (res != CURLE_OK) {
     UID = "ServerNotValid";
-    std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res)
-              << std::endl;
+    llvm::errs() << "curl_easy_perform() failed: " << curl_easy_strerror(res)
+                 << "\n";
   }
-
-  curl_easy_cleanup(curl);
 }
 
-} // namespace klee
+std::string ServerConnection::getUID() { return UID; }
+
+void ServerConnection::setUID(const std::string &newUID) { UID = newUID; }

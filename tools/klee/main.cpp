@@ -2459,10 +2459,7 @@ int main(int argc, char **argv, char **envp) {
   uint64_t solverTime =
       (*theStatisticManager->getStatisticByName("SolverTime")) / 1000000000;
 
-  std::uint32_t solverH;
-  std::uint8_t solverM, solverS;
-  std::tie(solverH, solverM, solverS) = time::seconds(solverTime).toHMS();
-
+  auto [solverH, solverM, solverS] = time::seconds(solverTime).toHMS();
   std::stringstream ss;
   ss << std::setw(2) << std::setfill('0') << solverH << ':' << std::setw(2)
      << std::setfill('0') << +solverM << ':' << std::setw(2)

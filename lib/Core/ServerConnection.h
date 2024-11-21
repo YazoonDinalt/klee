@@ -11,19 +11,24 @@
 #define KLEE_SERVERCONNECTION_H
 
 #include "nlohmann/json.hpp"
-
-using json = nlohmann::json;
+#include <curl/curl.h>
 
 namespace klee {
 
 class ServerConnection {
-public:
-  std::string url;
-  std::string UID;
 
 public:
-  void PostRequest(const std::vector<json> &metrics);
-  void getUID();
+  ServerConnection(const std::string &serverUrl);
+  ~ServerConnection();
+  void PostRequest(const std::vector<nlohmann::json> &metrics);
+  void getUIDFromServer();
+  std::string getUID();
+  void setUID(const std::string &newUID);
+
+private:
+  std::string url;
+  CURL *curl;
+  std::string UID;
 };
 } // namespace klee
 

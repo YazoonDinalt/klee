@@ -25,7 +25,7 @@ StatisticQueue::pop() {
   cond_var.wait(lock, [this] { return !StatQueue.empty(); });
   std::unordered_map<const llvm::Function *,
                      std::unordered_map<std::string, int>>
-      value = StatQueue.front();
+      value = std::move(StatQueue.front());
   StatQueue.pop();
   return value;
 }

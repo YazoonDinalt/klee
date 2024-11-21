@@ -31,7 +31,9 @@ add_library(kleeCore
   Searcher.cpp
   SeedInfo.cpp
   SeedMap.cpp
+  ServerConnection.cpp
   SpecialFunctionHandler.cpp
+  StatisticQueue.cpp
   StatsTracker.cpp
   TargetCalculator.cpp
   TargetedExecutionReporter.cpp
@@ -40,8 +42,6 @@ add_library(kleeCore
   TimingSolver.cpp
   TypeManager.cpp
   UserSearcher.cpp
-  ServerConnection.cpp
-  StatisticQueue.cpp
 )
 
 target_link_libraries(kleeCore PRIVATE

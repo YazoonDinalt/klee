@@ -28,7 +28,6 @@ void ObjectManager::setCurrentState(ExecutionState *_current) {
   statesUpdated = true;
   InfoStackFrame &sf = current->stack.infoStack().back();
   StatisticMap[sf.callPathNode] = &sf.callPathNode->statistics;
-  auto funName = sf.callPathNode->function->getName().str();
 }
 
 ExecutionState *ObjectManager::branchState(ExecutionState *state,
